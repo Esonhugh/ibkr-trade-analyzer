@@ -1,0 +1,17 @@
+{
+  "name": "ibkr-trade-analyzer",
+  "owner": {
+    "name": "Esonhugh"
+  },
+  "metadata": {
+    "description": "Claude Code plugin for analyzing Interactive Brokers trading history",
+    "version": "1.1.0"
+  },
+  "plugins": [
+    {
+      "name": "ibkr-trade-analyzer",
+      "source": "./",
+      "description": "Analyze Interactive Brokers (IBKR) trading history with read-only access. Generates reports on trading patterns, P&L performance, portfolio structure, and fee analysis via Flex Web Service API or local CSV/XML files."
+    }
+  ]
+}
