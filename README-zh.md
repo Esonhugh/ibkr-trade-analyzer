@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![版本](https://img.shields.io/badge/版本-1.1.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![版本](https://img.shields.io/badge/版本-1.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 **一个用于分析 Interactive Brokers 交易历史的 Claude Code 插件 — 只读分析，零风险。**
@@ -14,18 +14,20 @@
 | **交易行为模式** | 交易频率、持仓周期、时段分布、胜率、盈亏比 |
 | **盈亏表现** | 已实现盈亏、权益曲线、夏普比率、最大回撤、月度收益 |
 | **组合结构** | 资产配置、行业集中度、多空比例、仓位大小 |
+| **成本基准（三种方法）** | 保本价/摊薄成本（富途算法）、FIFO 先进先出、LIFO 后进先出 — 三种方法并列对比 |
 | **费用与现金流** | 佣金、利息、股息、融资成本、费用/盈亏比 |
 | **现金与外汇** | 多币种余额、外汇汇率（1 USD = X 外币）、流动性比率 |
 | **交易风格画像** | 自动生成的定性总结（日内/波段/趋势、方向偏好、风险偏好）|
 | **风险评估** | 6 个维度的 0-100 评分，附具体风险预警 |
 | **价格图表** | 叠加买卖标记的历史价格走势图 |
 
-### v1.1.0 新特性
+### v1.2.0 新特性
 
-- **`--analyzers` 参数** — 仅运行关心的板块（如 `--analyzers pnl,fx`），默认启用全部 6 个
-- **XML 自动缓存** — Flex XML 自动保存至插件 data 目录，格式 `{accountId}-flex-ibkr-YYYY-MM-DD.xml`；当天重复运行直接读取缓存，不再调用 API
-- **外汇汇率展示** — 改为 `1 USD = X 外币` 格式（对 USD 基准账户更直观）
-- **分析器模块化** — 拆分为 `analyzers/` 子包（`trade.py`、`pnl.py`、`portfolio.py`、`cost.py`、`price.py`、`fx.py`）
+- **保本价/摊薄成本（富途算法）** — 计算每只标的的动态保本价：盈利卖出降低剩余持仓成本，亏损卖出抬高成本。佣金单独记录，不计入成本价（与富途/moomoo 一致）
+- **LIFO 后进先出** — 新增 LIFO 成本基准分析器，优先匹配最近买入的份额（IBKR 税务优化器的 7 种方法之一）
+- **三种方法并列对比** — 报告中保本价 vs FIFO vs LIFO 逐标的对比展示
+- **单标的深度分析** — `--symbol AMZN,BRK B` 参数生成逐笔交易的成本演变详情
+- **`diluted_cost` 分析板块** — 新增 `--analyzers diluted_cost` 选项；默认全量运行时自动包含
 
 ## 安装
 
@@ -98,7 +100,7 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx --no-pr
 uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 ```
 
-可用板块：`trade`、`pnl`、`portfolio`、`cost`、`price`、`fx`（默认：全部）。
+可用板块：`trade`、`pnl`、`portfolio`、`cost`、`price`、`fx`、`diluted_cost`（默认：全部）。
 
 ## 数据来源
 

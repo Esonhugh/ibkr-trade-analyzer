@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A Claude Code plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
@@ -14,18 +14,20 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 | **Trading Patterns** | Frequency, holding periods, time-of-day patterns, win rate, profit factor |
 | **P&L Performance** | Realized P&L, equity curve, Sharpe ratio, max drawdown, monthly returns |
 | **Portfolio Structure** | Asset allocation, sector concentration, long/short ratio, position sizing |
+| **Cost Basis (3 methods)** | Breakeven/保本价 (Futu method), FIFO, LIFO — side-by-side comparison |
 | **Fees & Cash Flow** | Commissions, interest, dividends, financing costs, fee-to-PnL ratio |
 | **Cash & Currency** | Multi-currency balances, FX conversion rates (1 USD = X FCY), liquidity ratio |
 | **Trading Style Profile** | Auto-generated qualitative summary (day/swing/position trader, bias, risk) |
 | **Risk Assessment** | Scored 0-100 across 6 dimensions with specific warnings |
 | **Price Charts** | Historical price data with buy/sell trade markers overlaid |
 
-### What's New in v1.1.0
+### What's New in v1.2.0
 
-- **`--analyzers` flag** — run only the sections you care about (e.g. `--analyzers pnl,fx`), default is all six
-- **XML auto-cache** — Flex XML saved to plugin data dir as `{accountId}-flex-ibkr-YYYY-MM-DD.xml`; same-day reruns skip the API call automatically
-- **FX rate display** — now shown as `1 USD = X FCY` (more natural for USD-base accounts)
-- **Modular analyzers** — split into `analyzers/` subpackage (`trade.py`, `pnl.py`, `portfolio.py`, `cost.py`, `price.py`, `fx.py`)
+- **Breakeven cost (保本价/摊薄成本)** — Futu-style breakeven price: profitable sells reduce remaining cost, losses raise it. Commission tracked separately (not folded into cost)
+- **LIFO lot matching** — Last In, First Out cost basis as a comparison method (one of IBKR's 7 Tax Optimizer methods)
+- **Three-way cost comparison** — Breakeven vs FIFO vs LIFO shown side-by-side for each symbol
+- **Per-symbol deep dive** — `--symbol AMZN,BRK B` generates detailed trade history with cost evolution per method
+- **`diluted_cost` analyzer section** — new `--analyzers diluted_cost` option; included in default "all" run
 
 ## Installation
 
@@ -98,7 +100,7 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx --no-pr
 uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 ```
 
-Available sections: `trade`, `pnl`, `portfolio`, `cost`, `price`, `fx` (default: all).
+Available sections: `trade`, `pnl`, `portfolio`, `cost`, `price`, `fx`, `diluted_cost` (default: all).
 
 ## Data Source Options
 
