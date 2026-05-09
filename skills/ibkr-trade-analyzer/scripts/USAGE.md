@@ -40,8 +40,8 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx,pnl
 
 ### `--analyzers` sections
 
-Use `--analyzers` to run only the sections you care about.  
-**Default (when flag is omitted): all six sections are enabled.** Specify a subset to focus the report and skip unneeded work.
+Use `--analyzers` to run only the sections you care about.
+**Default (when flag is omitted): all seven sections are enabled.** Specify a subset to focus the report and skip unneeded work.
 
 | Section | What it covers |
 |---------|----------------|
@@ -51,6 +51,7 @@ Use `--analyzers` to run only the sections you care about.
 | `cost` | Commissions, dividends, interest income, withholding tax, commission trend |
 | `price` | Historical price chart with buy/sell markers for top traded symbols (needs network) |
 | `fx` | Weighted average exchange rates (1 USD = X FCY), effective rate after commission, MTM P&L |
+| `diluted_cost` | 摊薄成本价/保本价 — breakeven cost per symbol (Futu method), sells reduce/raise cost, FIFO comparison |
 
 Examples:
 
@@ -64,8 +65,11 @@ uv run ibkr_analyzer.py --mode flex --analyzers pnl,trade
 # Portfolio snapshot — current holdings, cash, risk score
 uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 
+# Diluted cost analysis — see average cost per position vs FIFO
+uv run ibkr_analyzer.py --mode flex --analyzers diluted_cost --no-prices
+
 # All sections except price charts (no external network calls beyond Flex)
-uv run ibkr_analyzer.py --mode flex --analyzers trade,pnl,portfolio,cost,fx
+uv run ibkr_analyzer.py --mode flex --analyzers trade,pnl,portfolio,cost,fx,diluted_cost
 ```
 
 ## XML Data Cache
@@ -99,11 +103,12 @@ scripts/
 ├── models.py            ← dataclasses: Trade, CashTransaction, OpenPosition, CashBalance, AccountData
 ├── loader.py            ← DataLoader: Flex API polling, CSV/XML parsing, auto-save/cache, FIFO PnL
 ├── analyzers/           ← analysis subpackage (one file per analyzer)
-│   ├── __init__.py      ← re-exports all six analyzer classes
+│   ├── __init__.py      ← re-exports all seven analyzer classes
 │   ├── trade.py         ← TradeAnalyzer
 │   ├── pnl.py           ← PnLAnalyzer
 │   ├── portfolio.py     ← PortfolioAnalyzer
 │   ├── cost.py          ← CostAnalyzer
+│   ├── diluted_cost.py  ← DilutedCostAnalyzer (摊薄成本法)
 │   ├── price.py         ← PriceAnalyzer
 │   └── fx.py            ← FxAnalyzer
 └── report.py            ← ReportGenerator: terminal summary, Markdown tables, interactive HTML
@@ -147,7 +152,7 @@ All analyzers accept `list[Trade]` (and other model lists) and expose a `.summar
 Import from the package directly — `__init__.py` re-exports everything:
 
 ```python
-from analyzers import TradeAnalyzer, PnLAnalyzer, PortfolioAnalyzer, CostAnalyzer, PriceAnalyzer, FxAnalyzer
+from analyzers import TradeAnalyzer, PnLAnalyzer, PortfolioAnalyzer, CostAnalyzer, PriceAnalyzer, FxAnalyzer, DilutedCostAnalyzer
 
 ta   = TradeAnalyzer(data.trades)
 pa   = PnLAnalyzer(data.trades)
@@ -156,16 +161,21 @@ port = PortfolioAnalyzer(data.open_positions, data.trades,
                          conversion_rates=data.conversion_rates,
                          base_currency=data.base_currency)
 ca   = CostAnalyzer(data.trades, data.cash_transactions)
+dca  = DilutedCostAnalyzer(data.trades, data.open_positions)
 fxa  = FxAnalyzer(data.trades, base_currency="USD", conversion_rates=data.conversion_rates)
 
 trade_s = ta.summary()    # win rate, profit factor, by-asset breakdown, ...
 pnl_s   = pa.summary()    # total PnL, Sharpe, drawdown, monthly returns, ...
 port_s  = port.summary()  # holdings, concentration, FX analysis, cash breakdown, ...
 cost_s  = ca.summary()    # commissions, dividends, interest, fee/PnL ratio, ...
+dc_s    = dca.summary()   # diluted avg cost per symbol, FIFO vs diluted comparison, ...
 fx_s    = fxa.summary()   # per-currency: weighted avg rate (1 USD = X FCY), MTM PnL, ...
 
 # Equity curve for charting
 curve = pa.equity_curve_data()   # list[{date, cumulative_pnl}]
+
+# Per-symbol cost evolution history (diluted method)
+history = dca.get_symbol_history("AAPL")  # list[{date, action, avg_cost_after, ...}]
 
 # Price data with trade markers (requires network; skippable with --no-prices)
 price_a = PriceAnalyzer(data.trades, top_n=5)

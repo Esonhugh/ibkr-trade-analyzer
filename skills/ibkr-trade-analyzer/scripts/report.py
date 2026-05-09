@@ -26,20 +26,24 @@ class ReportGenerator:
         output_dir: Path,
         price_charts: list[dict] | None = None,
         fx_summary: dict | None = None,
+        diluted_cost_summary: dict | None = None,
         enabled_sections: set[str] | None = None,
+        symbol_deep_dive: dict[str, list[dict]] | None = None,
     ):
         self.trade_s = trade_summary
         self.pnl_s = pnl_summary
         self.port_s = portfolio_summary
         self.cost_s = cost_summary
+        self.diluted_s = diluted_cost_summary or {}
         self.equity_curve = equity_curve
         self.trade_df = trade_df
         self.output_dir = output_dir
         self.price_charts = price_charts or []
         self.fx_s = fx_summary or {}
+        self.symbol_deep_dive = symbol_deep_dive or {}
         self.date_str = datetime.now().strftime("%Y-%m-%d")
         # Default: all sections enabled
-        _all = {"trade", "pnl", "portfolio", "cost", "price", "fx"}
+        _all = {"trade", "pnl", "portfolio", "cost", "price", "fx", "diluted_cost"}
         self.enabled = enabled_sections if enabled_sections is not None else _all
 
     def _on(self, *sections: str) -> bool:
@@ -52,7 +56,31 @@ class ReportGenerator:
         lines = ["=" * 55, "  IBKR Trading Analysis Summary", "=" * 55]
 
         if self.trade_df.empty:
-            lines.append("No trade data available.")
+            # Still show diluted cost summary if available
+            if self._on("diluted_cost") and self.diluted_s:
+                dc_pnl = self.diluted_s.get("total_realized_pnl_diluted", 0)
+                fifo_pnl = self.diluted_s.get("total_realized_pnl_fifo", 0)
+                diff = self.diluted_s.get("pnl_method_diff", 0)
+                lines.append(
+                    f"Diluted Cost P&L: ${dc_pnl:,.2f}  |  "
+                    f"FIFO P&L: ${fifo_pnl:,.2f}  |  "
+                    f"Diff: ${diff:+,.2f}"
+                )
+                if self.symbol_deep_dive:
+                    for sym, history in self.symbol_deep_dive.items():
+                        if not history:
+                            continue
+                        last = history[-1]
+                        buys = [h for h in history if h["action"] in ("BUY", "BOT")]
+                        sells = [h for h in history if h["action"] in ("SELL", "SLD")]
+                        lines.append(
+                            f"  [{sym}] Breakeven: ${last['breakeven_after']:,.4f}  "
+                            f"Pos: {last['position_after']:g}  "
+                            f"P&L: ${last['cumulative_pnl']:,.2f}  "
+                            f"({len(buys)}B/{len(sells)}S)"
+                        )
+            else:
+                lines.append("No trade data available.")
             summary = "\n".join(lines)
             print(summary)
             return summary
@@ -78,6 +106,30 @@ class ReportGenerator:
         if self._on("cost"):
             comm = self.cost_s.get("total_commissions", 0)
             lines.append(f"Total Fees: ${comm:,.2f} ({self.cost_s.get('fee_to_pnl_ratio_pct', 0):.1f}% of gross profit)")
+
+        if self._on("diluted_cost") and self.diluted_s:
+            dc_pnl = self.diluted_s.get("total_realized_pnl_diluted", 0)
+            fifo_pnl = self.diluted_s.get("total_realized_pnl_fifo", 0)
+            diff = self.diluted_s.get("pnl_method_diff", 0)
+            lines.append(
+                f"Diluted Cost P&L: ${dc_pnl:,.2f}  |  "
+                f"FIFO P&L: ${fifo_pnl:,.2f}  |  "
+                f"Diff: ${diff:+,.2f}"
+            )
+            # Per-symbol terminal detail (--symbol)
+            if self.symbol_deep_dive:
+                for sym, history in self.symbol_deep_dive.items():
+                    if not history:
+                        continue
+                    last = history[-1]
+                    buys = [h for h in history if h["action"] in ("BUY", "BOT")]
+                    sells = [h for h in history if h["action"] in ("SELL", "SLD")]
+                    lines.append(
+                        f"  [{sym}] Breakeven: ${last['breakeven_after']:,.4f}  "
+                        f"Pos: {last['position_after']:g}  "
+                        f"P&L: ${last['cumulative_pnl']:,.2f}  "
+                        f"({len(buys)}B/{len(sells)}S)"
+                    )
 
         if self._on("pnl"):
             winners = self.pnl_s.get("top_winners", [])
@@ -286,6 +338,131 @@ class ReportGenerator:
                 f"| Withholding Tax | ${self.cost_s.get('withholding_tax', 0):,.2f} |",
                 f"| Net Interest | ${self.cost_s.get('interest_net', 0):,.2f} |", "",
             ]
+
+        # Diluted Cost (摊薄成本法)
+        if self._on("diluted_cost") and self.diluted_s and self.diluted_s.get("total_symbols", 0) > 0:
+            dc = self.diluted_s
+            s += [
+                "## Diluted Cost Analysis (摊薄成本法)\n",
+                "_Unlike FIFO, the diluted cost method computes a running breakeven price (保本价). "
+                "Selling at a profit reduces the breakeven cost of remaining shares; selling at a loss raises it. "
+                "Commission is tracked separately, NOT folded into cost price (matching Futu/Moomoo convention)._\n",
+                "### Method Comparison\n",
+                "| Metric | Diluted Cost | FIFO | Difference |",
+                "|--------|-------------|------|------------|",
+                f"| Total Realized P&L | ${dc.get('total_realized_pnl_diluted', 0):,.2f} "
+                f"| ${dc.get('total_realized_pnl_fifo', 0):,.2f} "
+                f"| ${dc.get('pnl_method_diff', 0):+,.2f} ({dc.get('pnl_method_diff_pct', 0):+.2f}%) |",
+                f"| Total Commission (tracked separately) | ${dc.get('total_commission_in_cost', 0):,.2f} | — | — |",
+                f"| Symbols Traded | {dc.get('total_symbols', 0)} | — | — |",
+                f"| Active Positions | {dc.get('active_positions', 0)} | — | — |", "",
+            ]
+
+            # Active positions with diluted cost
+            active = dc.get("active_position_details", [])
+            if active:
+                s += [
+                    "### Active Positions (Diluted Cost)\n",
+                    "| Symbol | Qty | Breakeven Cost | Total Cost | Buys | Sells |",
+                    "|--------|-----|-------------------|-----------|------|-------|",
+                ]
+                for pos in active:
+                    qty = pos["quantity"]
+                    qty_str = f"{qty:g}" if qty == int(qty) else f"{qty:.4f}"
+                    s.append(
+                        f"| {pos['symbol']} | {qty_str} "
+                        f"| ${pos['avg_cost']:,.4f} "
+                        f"| ${pos['total_cost']:,.2f} "
+                        f"| {pos['n_buys']} | {pos['n_sells']} |"
+                    )
+                s.append("")
+
+            # Top symbols by P&L with cost comparison
+            details = dc.get("symbol_details", [])
+            if details:
+                s += [
+                    "### Per-Symbol P&L (Diluted Cost Method)\n",
+                    "| Symbol | Realized P&L | Unrealized P&L | Total Return | Breakeven Cost | FIFO Cost | Diff |",
+                    "|--------|-------------|---------------|-------------|-------------|----------|------|",
+                ]
+                for d in details[:15]:
+                    fifo_str = f"${d['fifo_cost_basis']:,.4f}" if d.get("fifo_cost_basis") else "—"
+                    diff_str = f"${d['cost_diff']:+,.4f}" if d.get("cost_diff") is not None else "—"
+                    s.append(
+                        f"| {d['symbol']} "
+                        f"| ${d['realized_pnl_diluted']:,.2f} "
+                        f"| ${d.get('unrealized_pnl_diluted', 0):,.2f} "
+                        f"| ${d.get('total_return_diluted', 0):,.2f} "
+                        f"| ${d['diluted_avg_cost']:,.4f} "
+                        f"| {fifo_str} "
+                        f"| {diff_str} |"
+                    )
+                s.append("")
+
+            # Per-symbol deep-dive (--symbol flag)
+            if self.symbol_deep_dive:
+                for sym, history in self.symbol_deep_dive.items():
+                    # Find this symbol's final state from summary
+                    sym_detail = next(
+                        (d for d in dc.get("symbol_details", []) if d["symbol"] == sym), {}
+                    )
+                    s += [
+                        f"### {sym} — Diluted Cost Deep Dive\n",
+                    ]
+                    # Symbol summary card
+                    if sym_detail:
+                        avg_c = sym_detail.get("diluted_avg_cost", 0)
+                        cur_qty = sym_detail.get("current_qty", 0)
+                        r_pnl = sym_detail.get("realized_pnl_diluted", 0)
+                        u_pnl = sym_detail.get("unrealized_pnl_diluted", 0)
+                        mark = sym_detail.get("mark_price", 0)
+                        fifo_c = sym_detail.get("fifo_cost_basis")
+                        pnl_pct = sym_detail.get("pnl_pct", 0)
+                        s.append(f"| Metric | Value |")
+                        s.append(f"|--------|-------|")
+                        s.append(f"| Current Position | {cur_qty:g} shares |")
+                        s.append(f"| Breakeven Cost (保本价) | ${avg_c:,.4f} |")
+                        if fifo_c:
+                            s.append(f"| FIFO Cost Basis | ${fifo_c:,.4f} |")
+                            s.append(f"| Cost Diff (Diluted − FIFO) | ${avg_c - fifo_c:+,.4f} |")
+                        if mark > 0:
+                            s.append(f"| Mark Price | ${mark:,.2f} |")
+                            s.append(f"| P&L % (vs Breakeven) | {pnl_pct:+.2f}% |")
+                        s.append(f"| Realized P&L | ${r_pnl:,.2f} |")
+                        s.append(f"| Unrealized P&L | ${u_pnl:,.2f} |")
+                        s.append(f"| Total Return | ${r_pnl + u_pnl:,.2f} |")
+                        s.append(f"| Trades | {sym_detail.get('n_buys', 0)} buys, {sym_detail.get('n_sells', 0)} sells |")
+                        s.append(f"| Total Commission | ${sym_detail.get('total_commission', 0):,.2f} |")
+                        s.append("")
+
+                    # Trade-by-trade cost evolution table
+                    s += [
+                        f"#### Trade History & Cost Evolution\n",
+                        "| # | Date | Action | Qty | Price | Commission | Avg Cost After | Position | Cum. P&L |",
+                        "|---|------|--------|-----|-------|-----------|---------------|----------|----------|",
+                    ]
+                    for i, h in enumerate(history, 1):
+                        action_emoji = "B" if h["action"] in ("BUY", "BOT") else "S"
+                        s.append(
+                            f"| {i} | {h['date']} | {action_emoji} "
+                            f"| {h['qty']:g} "
+                            f"| ${h['price']:,.2f} "
+                            f"| ${h['commission']:,.2f} "
+                            f"| ${h['breakeven_after']:,.4f} "
+                            f"| {h['position_after']:g} "
+                            f"| ${h['cumulative_pnl']:,.2f} |"
+                        )
+                    s.append("")
+
+                    # Cost trend summary
+                    if len(history) >= 2:
+                        costs = [h["breakeven_after"] for h in history if h["action"] in ("BUY", "BOT")]
+                        if len(costs) >= 2:
+                            s.append(f"_Cost basis started at ${costs[0]:,.4f}, ")
+                            if costs[-1] > costs[0]:
+                                s.append(f"rose to ${costs[-1]:,.4f} (+${costs[-1] - costs[0]:,.4f}) over {len(costs)} buys._\n")
+                            else:
+                                s.append(f"fell to ${costs[-1]:,.4f} (${costs[-1] - costs[0]:,.4f}) over {len(costs)} buys — cost was diluted down._\n")
 
         # FX weighted average rates
         if self._on("fx") and self.fx_s:
@@ -700,6 +877,110 @@ class ReportGenerator:
                     yaxis_title="USD", template="plotly_white", height=350,
                 )
                 charts["fx_mtm"] = fig2.to_json()
+
+        # Diluted cost comparison chart
+        if self._on("diluted_cost") and self.diluted_s:
+            details = self.diluted_s.get("symbol_details", [])
+            # Show top symbols that have both diluted and FIFO cost
+            cost_compare = [d for d in details if d.get("fifo_cost_basis") and d["current_qty"] > 0][:10]
+            if cost_compare:
+                symbols = [d["symbol"] for d in cost_compare]
+                diluted_costs = [d["diluted_avg_cost"] for d in cost_compare]
+                fifo_costs = [d["fifo_cost_basis"] for d in cost_compare]
+                mark_prices = [d.get("mark_price", 0) for d in cost_compare]
+
+                fig = go.Figure()
+                fig.add_trace(go.Bar(name="Breakeven Cost (保本价)", x=symbols, y=diluted_costs,
+                                     marker_color="#FF9800"))
+                fig.add_trace(go.Bar(name="FIFO Cost", x=symbols, y=fifo_costs,
+                                     marker_color="#2196F3"))
+                if any(p > 0 for p in mark_prices):
+                    fig.add_trace(go.Scatter(name="Current Price", x=symbols, y=mark_prices,
+                                             mode="markers+lines",
+                                             marker=dict(symbol="diamond", size=10, color="#4CAF50"),
+                                             line=dict(dash="dot", color="#4CAF50")))
+                fig.update_layout(
+                    title="Cost Basis Comparison: Breakeven (保本价) vs FIFO vs Market Price",
+                    yaxis_title="Price ($)", barmode="group",
+                    template="plotly_white", height=400,
+                )
+                charts["diluted_cost_compare"] = fig.to_json()
+
+            # P&L comparison between methods
+            pnl_details = [d for d in details if abs(d["realized_pnl_diluted"]) > 0][:12]
+            if pnl_details:
+                symbols = [d["symbol"] for d in pnl_details]
+                dc_pnl = [d["realized_pnl_diluted"] for d in pnl_details]
+
+                fig = go.Figure(go.Bar(
+                    x=symbols, y=dc_pnl,
+                    marker_color=["#4CAF50" if v >= 0 else "#F44336" for v in dc_pnl],
+                    text=[f"${v:+,.0f}" for v in dc_pnl], textposition="outside",
+                ))
+                fig.update_layout(
+                    title="Realized P&L by Symbol (Diluted Cost Method)",
+                    yaxis_title="P&L ($)", template="plotly_white", height=400,
+                )
+                charts["diluted_pnl_by_symbol"] = fig.to_json()
+
+            # Per-symbol cost evolution charts (--symbol deep dive)
+            if self.symbol_deep_dive:
+                for sym, history in self.symbol_deep_dive.items():
+                    if not history:
+                        continue
+                    dates = [h["date"] for h in history]
+                    avg_costs = [h["breakeven_after"] for h in history]
+                    positions = [h["position_after"] for h in history]
+                    actions = [h["action"] for h in history]
+                    prices = [h["price"] for h in history]
+                    cum_pnl = [h["cumulative_pnl"] for h in history]
+
+                    fig = make_subplots(
+                        rows=2, cols=1, shared_xaxes=True,
+                        row_heights=[0.65, 0.35],
+                        subplot_titles=[
+                            f"{sym} — Breakeven Cost Evolution (保本价)",
+                            f"{sym} — Position Size & Cumulative P&L",
+                        ],
+                    )
+                    # Avg cost line
+                    fig.add_trace(go.Scatter(
+                        x=dates, y=avg_costs, name="Breakeven Cost (保本价)",
+                        line=dict(color="#FF9800", width=2),
+                        mode="lines+markers",
+                    ), row=1, col=1)
+                    # Trade prices with buy/sell color
+                    buy_idx = [i for i, a in enumerate(actions) if a in ("BUY", "BOT")]
+                    sell_idx = [i for i, a in enumerate(actions) if a in ("SELL", "SLD")]
+                    if buy_idx:
+                        fig.add_trace(go.Scatter(
+                            x=[dates[i] for i in buy_idx],
+                            y=[prices[i] for i in buy_idx],
+                            name="Buy Price", mode="markers",
+                            marker=dict(color="#4CAF50", size=9, symbol="triangle-up"),
+                        ), row=1, col=1)
+                    if sell_idx:
+                        fig.add_trace(go.Scatter(
+                            x=[dates[i] for i in sell_idx],
+                            y=[prices[i] for i in sell_idx],
+                            name="Sell Price", mode="markers",
+                            marker=dict(color="#F44336", size=9, symbol="triangle-down"),
+                        ), row=1, col=1)
+                    # Position size bar
+                    fig.add_trace(go.Bar(
+                        x=dates, y=positions, name="Position",
+                        marker_color="#90CAF9", opacity=0.6,
+                    ), row=2, col=1)
+                    # Cumulative P&L line (same subplot as position)
+                    fig.add_trace(go.Scatter(
+                        x=dates, y=cum_pnl, name="Cum. P&L",
+                        line=dict(color="#9C27B0", width=2, dash="dot"),
+                    ), row=2, col=1)
+                    fig.update_layout(
+                        template="plotly_white", height=550,
+                        yaxis_title="Price ($)", yaxis2_title="Shares / P&L ($)",
+                    )
+                    charts[f"symbol_deep_{sym}"] = fig.to_json()
 
         return charts
 

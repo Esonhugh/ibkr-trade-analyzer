@@ -29,7 +29,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from analyzers import CostAnalyzer, FxAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
+from analyzers import CostAnalyzer, DilutedCostAnalyzer, FxAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
 from loader import DataLoader
 from report import ReportGenerator
 
@@ -47,8 +47,9 @@ def main() -> None:
     parser.add_argument("--no-prices", action="store_true", help="Skip fetching stock price history from yfinance")
     parser.add_argument("--price-top-n", type=int, default=5, help="Number of top traded symbols to fetch prices for (default: 5)")
     parser.add_argument("--proxy", help="HTTP/SOCKS5 proxy URL, e.g. socks5://127.0.0.1:7980")
+    parser.add_argument("--symbol", help="Focus diluted cost deep-dive on specific symbol(s), comma-separated, e.g. AMZN,AAPL")
     parser.add_argument("--dump-xml", help="Dump raw Flex XML response to this file path for debugging")
-    _ALL_SECTIONS = {"trade", "pnl", "portfolio", "cost", "price", "fx"}
+    _ALL_SECTIONS = {"trade", "pnl", "portfolio", "cost", "price", "fx", "diluted_cost"}
     parser.add_argument(
         "--analyzers",
         help=(
@@ -150,6 +151,7 @@ def main() -> None:
         base_currency=data.base_currency,
     ) if "portfolio" in enabled_sections else None
     ca = CostAnalyzer(data.trades, data.cash_transactions) if "cost" in enabled_sections else None
+    dca = DilutedCostAnalyzer(data.trades, data.open_positions) if "diluted_cost" in enabled_sections else None
     fxa = FxAnalyzer(data.trades, base_currency=data.base_currency,
                      conversion_rates=data.conversion_rates) if "fx" in enabled_sections else None
 
@@ -165,18 +167,31 @@ def main() -> None:
                 price_charts.append(price_analyzer.price_vs_trades_data(sym, pdf))
             print(f"  Fetched price data for: {', '.join(prices.keys())}")
 
+    # Per-symbol deep-dive (--symbol flag)
+    symbol_deep_dive: dict[str, list[dict]] = {}
+    if args.symbol and dca:
+        focus_symbols = [s.strip().upper() for s in args.symbol.split(",")]
+        for sym in focus_symbols:
+            history = dca.get_symbol_history(sym)
+            if history:
+                symbol_deep_dive[sym] = history
+            else:
+                print(f"  Warning: no trades found for symbol '{sym}'")
+
     # Generate reports
     rg = ReportGenerator(
         trade_summary=ta.summary() if ta else {},
         pnl_summary=pa.summary() if pa else {},
         portfolio_summary=porta.summary() if porta else {},
         cost_summary=ca.summary() if ca else {},
+        diluted_cost_summary=dca.summary() if dca else {},
         equity_curve=pa.equity_curve_data() if pa else [],
         trade_df=ta.df if ta else __import__("pandas").DataFrame(),
         output_dir=output_dir,
         price_charts=price_charts,
         fx_summary=fxa.summary() if fxa else {},
         enabled_sections=enabled_sections,
+        symbol_deep_dive=symbol_deep_dive,
     )
 
     rg.print_terminal_summary()
