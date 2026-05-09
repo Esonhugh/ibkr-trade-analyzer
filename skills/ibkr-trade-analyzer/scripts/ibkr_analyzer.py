@@ -29,7 +29,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from analyzers import CostAnalyzer, DilutedCostAnalyzer, FxAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
+from analyzers import CostAnalyzer, DilutedCostAnalyzer, FxAnalyzer, LifoAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
 from loader import DataLoader
 from report import ReportGenerator
 
@@ -152,6 +152,7 @@ def main() -> None:
     ) if "portfolio" in enabled_sections else None
     ca = CostAnalyzer(data.trades, data.cash_transactions) if "cost" in enabled_sections else None
     dca = DilutedCostAnalyzer(data.trades, data.open_positions) if "diluted_cost" in enabled_sections else None
+    lifo = LifoAnalyzer(data.trades, data.open_positions) if "diluted_cost" in enabled_sections else None
     fxa = FxAnalyzer(data.trades, base_currency=data.base_currency,
                      conversion_rates=data.conversion_rates) if "fx" in enabled_sections else None
 
@@ -185,6 +186,7 @@ def main() -> None:
         portfolio_summary=porta.summary() if porta else {},
         cost_summary=ca.summary() if ca else {},
         diluted_cost_summary=dca.summary() if dca else {},
+        lifo_summary=lifo.summary() if lifo else {},
         equity_curve=pa.equity_curve_data() if pa else [],
         trade_df=ta.df if ta else __import__("pandas").DataFrame(),
         output_dir=output_dir,

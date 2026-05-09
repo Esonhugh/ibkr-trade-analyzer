@@ -7,12 +7,14 @@ Each analyzer lives in its own module:
   analyzers/cost.py           — CostAnalyzer
   analyzers/price.py          — PriceAnalyzer
   analyzers/fx.py             — FxAnalyzer
-  analyzers/diluted_cost.py   — DilutedCostAnalyzer (摊薄成本法)
+  analyzers/diluted_cost.py   — DilutedCostAnalyzer (摊薄成本价/保本价)
+  analyzers/lifo.py           — LifoAnalyzer (LIFO lot matching)
 """
 
 from .cost import CostAnalyzer
 from .diluted_cost import DilutedCostAnalyzer
 from .fx import FxAnalyzer
+from .lifo import LifoAnalyzer
 from .pnl import PnLAnalyzer
 from .portfolio import PortfolioAnalyzer
 from .price import PriceAnalyzer
@@ -22,6 +24,7 @@ __all__ = [
     "CostAnalyzer",
     "DilutedCostAnalyzer",
     "FxAnalyzer",
+    "LifoAnalyzer",
     "PnLAnalyzer",
     "PortfolioAnalyzer",
     "PriceAnalyzer",

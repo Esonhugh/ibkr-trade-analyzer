@@ -27,6 +27,7 @@ class ReportGenerator:
         price_charts: list[dict] | None = None,
         fx_summary: dict | None = None,
         diluted_cost_summary: dict | None = None,
+        lifo_summary: dict | None = None,
         enabled_sections: set[str] | None = None,
         symbol_deep_dive: dict[str, list[dict]] | None = None,
     ):
@@ -35,6 +36,7 @@ class ReportGenerator:
         self.port_s = portfolio_summary
         self.cost_s = cost_summary
         self.diluted_s = diluted_cost_summary or {}
+        self.lifo_s = lifo_summary or {}
         self.equity_curve = equity_curve
         self.trade_df = trade_df
         self.output_dir = output_dir
@@ -60,11 +62,11 @@ class ReportGenerator:
             if self._on("diluted_cost") and self.diluted_s:
                 dc_pnl = self.diluted_s.get("total_realized_pnl_diluted", 0)
                 fifo_pnl = self.diluted_s.get("total_realized_pnl_fifo", 0)
-                diff = self.diluted_s.get("pnl_method_diff", 0)
+                lifo_pnl = self.lifo_s.get("total_realized_pnl_lifo", 0)
                 lines.append(
-                    f"Diluted Cost P&L: ${dc_pnl:,.2f}  |  "
-                    f"FIFO P&L: ${fifo_pnl:,.2f}  |  "
-                    f"Diff: ${diff:+,.2f}"
+                    f"Breakeven P&L: ${dc_pnl:,.2f}  |  "
+                    f"FIFO: ${fifo_pnl:,.2f}  |  "
+                    f"LIFO: ${lifo_pnl:,.2f}"
                 )
                 if self.symbol_deep_dive:
                     for sym, history in self.symbol_deep_dive.items():
@@ -110,11 +112,11 @@ class ReportGenerator:
         if self._on("diluted_cost") and self.diluted_s:
             dc_pnl = self.diluted_s.get("total_realized_pnl_diluted", 0)
             fifo_pnl = self.diluted_s.get("total_realized_pnl_fifo", 0)
-            diff = self.diluted_s.get("pnl_method_diff", 0)
+            lifo_pnl = self.lifo_s.get("total_realized_pnl_lifo", 0)
             lines.append(
-                f"Diluted Cost P&L: ${dc_pnl:,.2f}  |  "
-                f"FIFO P&L: ${fifo_pnl:,.2f}  |  "
-                f"Diff: ${diff:+,.2f}"
+                f"Breakeven P&L: ${dc_pnl:,.2f}  |  "
+                f"FIFO: ${fifo_pnl:,.2f}  |  "
+                f"LIFO: ${lifo_pnl:,.2f}"
             )
             # Per-symbol terminal detail (--symbol)
             if self.symbol_deep_dive:
@@ -342,18 +344,19 @@ class ReportGenerator:
         # Diluted Cost (摊薄成本法)
         if self._on("diluted_cost") and self.diluted_s and self.diluted_s.get("total_symbols", 0) > 0:
             dc = self.diluted_s
+            lifo_pnl = self.lifo_s.get("total_realized_pnl_lifo", 0)
             s += [
                 "## Diluted Cost Analysis (摊薄成本法)\n",
                 "_Unlike FIFO, the diluted cost method computes a running breakeven price (保本价). "
                 "Selling at a profit reduces the breakeven cost of remaining shares; selling at a loss raises it. "
                 "Commission is tracked separately, NOT folded into cost price (matching Futu/Moomoo convention)._\n",
-                "### Method Comparison\n",
-                "| Metric | Diluted Cost | FIFO | Difference |",
-                "|--------|-------------|------|------------|",
+                "### Method Comparison (Breakeven vs FIFO vs LIFO)\n",
+                "| Metric | Breakeven (保本价) | FIFO | LIFO |",
+                "|--------|-------------------|------|------|",
                 f"| Total Realized P&L | ${dc.get('total_realized_pnl_diluted', 0):,.2f} "
                 f"| ${dc.get('total_realized_pnl_fifo', 0):,.2f} "
-                f"| ${dc.get('pnl_method_diff', 0):+,.2f} ({dc.get('pnl_method_diff_pct', 0):+.2f}%) |",
-                f"| Total Commission (tracked separately) | ${dc.get('total_commission_in_cost', 0):,.2f} | — | — |",
+                f"| ${lifo_pnl:,.2f} |",
+                f"| Total Commission | ${dc.get('total_commission_in_cost', 0):,.2f} | — | — |",
                 f"| Symbols Traded | {dc.get('total_symbols', 0)} | — | — |",
                 f"| Active Positions | {dc.get('active_positions', 0)} | — | — |", "",
             ]
@@ -379,25 +382,48 @@ class ReportGenerator:
 
             # Top symbols by P&L with cost comparison
             details = dc.get("symbol_details", [])
+            lifo_details = {d["symbol"]: d for d in self.lifo_s.get("symbol_details", [])}
             if details:
                 s += [
-                    "### Per-Symbol P&L (Diluted Cost Method)\n",
-                    "| Symbol | Realized P&L | Unrealized P&L | Total Return | Breakeven Cost | FIFO Cost | Diff |",
-                    "|--------|-------------|---------------|-------------|-------------|----------|------|",
+                    "### Per-Symbol Cost Comparison\n",
+                    "| Symbol | Breakeven (保本价) | FIFO Cost | LIFO Cost | Mark Price |",
+                    "|--------|-------------------|-----------|-----------|-----------|",
                 ]
                 for d in details[:15]:
+                    if d["current_qty"] <= 0:
+                        continue
                     fifo_str = f"${d['fifo_cost_basis']:,.4f}" if d.get("fifo_cost_basis") else "—"
-                    diff_str = f"${d['cost_diff']:+,.4f}" if d.get("cost_diff") is not None else "—"
+                    lifo_d = lifo_details.get(d["symbol"], {})
+                    lifo_str = f"${lifo_d['lifo_cost_basis']:,.4f}" if lifo_d.get("lifo_cost_basis") else "—"
+                    mark_str = f"${d['mark_price']:,.2f}" if d.get("mark_price") else "—"
                     s.append(
                         f"| {d['symbol']} "
-                        f"| ${d['realized_pnl_diluted']:,.2f} "
-                        f"| ${d.get('unrealized_pnl_diluted', 0):,.2f} "
-                        f"| ${d.get('total_return_diluted', 0):,.2f} "
                         f"| ${d['diluted_avg_cost']:,.4f} "
                         f"| {fifo_str} "
-                        f"| {diff_str} |"
+                        f"| {lifo_str} "
+                        f"| {mark_str} |"
                     )
                 s.append("")
+
+                # Realized P&L comparison by symbol
+                pnl_symbols = [d for d in details if d["realized_pnl_diluted"] != 0 or d.get("unrealized_pnl_diluted", 0) != 0]
+                if pnl_symbols:
+                    s += [
+                        "### Per-Symbol P&L (Three Methods)\n",
+                        "| Symbol | Breakeven P&L | LIFO P&L | Unrealized (Breakeven) | Total Return |",
+                        "|--------|--------------|---------|----------------------|-------------|",
+                    ]
+                    for d in pnl_symbols[:15]:
+                        lifo_d = lifo_details.get(d["symbol"], {})
+                        lifo_rpnl = lifo_d.get("realized_pnl_lifo", 0)
+                        s.append(
+                            f"| {d['symbol']} "
+                            f"| ${d['realized_pnl_diluted']:,.2f} "
+                            f"| ${lifo_rpnl:,.2f} "
+                            f"| ${d.get('unrealized_pnl_diluted', 0):,.2f} "
+                            f"| ${d.get('total_return_diluted', 0):,.2f} |"
+                        )
+                    s.append("")
 
             # Per-symbol deep-dive (--symbol flag)
             if self.symbol_deep_dive:
@@ -406,8 +432,9 @@ class ReportGenerator:
                     sym_detail = next(
                         (d for d in dc.get("symbol_details", []) if d["symbol"] == sym), {}
                     )
+                    lifo_sym = lifo_details.get(sym, {})
                     s += [
-                        f"### {sym} — Diluted Cost Deep Dive\n",
+                        f"### {sym} — Breakeven Cost Deep Dive\n",
                     ]
                     # Symbol summary card
                     if sym_detail:
@@ -417,6 +444,7 @@ class ReportGenerator:
                         u_pnl = sym_detail.get("unrealized_pnl_diluted", 0)
                         mark = sym_detail.get("mark_price", 0)
                         fifo_c = sym_detail.get("fifo_cost_basis")
+                        lifo_c = lifo_sym.get("lifo_cost_basis")
                         pnl_pct = sym_detail.get("pnl_pct", 0)
                         s.append(f"| Metric | Value |")
                         s.append(f"|--------|-------|")
@@ -424,7 +452,8 @@ class ReportGenerator:
                         s.append(f"| Breakeven Cost (保本价) | ${avg_c:,.4f} |")
                         if fifo_c:
                             s.append(f"| FIFO Cost Basis | ${fifo_c:,.4f} |")
-                            s.append(f"| Cost Diff (Diluted − FIFO) | ${avg_c - fifo_c:+,.4f} |")
+                        if lifo_c:
+                            s.append(f"| LIFO Cost Basis | ${lifo_c:,.4f} |")
                         if mark > 0:
                             s.append(f"| Mark Price | ${mark:,.2f} |")
                             s.append(f"| P&L % (vs Breakeven) | {pnl_pct:+.2f}% |")
