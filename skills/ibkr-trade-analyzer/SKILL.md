@@ -13,209 +13,130 @@ description: >
 
 # IBKR Trade Analyzer
 
-Analyze Interactive Brokers trading history using **read-only** data access. This skill
-generates reports covering four dimensions: trading behavior patterns, P&L performance,
-portfolio structure, and fee/cash flow analysis.
+Analyze Interactive Brokers trading history using **read-only** data access via MCP tools.
+The plugin exposes structured tools that return JSON results — no subprocess orchestration needed.
 
-Safety is the core principle here — the user explicitly wants read-only analysis with
-zero risk of accidental order execution. The Flex Web Service is inherently read-only
-(no order endpoints exist), and the local file mode has zero network access.
+## Available MCP Tools
+
+| Tool | Use When |
+|------|----------|
+| `ibkr_fetch_data` | First call — loads data from Flex API or local file. Caches in session. |
+| `ibkr_analyze` | Full or partial analysis with optional filters (period, asset types) |
+| `ibkr_portfolio` | Quick portfolio snapshot (positions, cash, risk score) |
+| `ibkr_pnl_summary` | P&L overview (total, Sharpe, drawdown, equity curve) |
+| `ibkr_trade_patterns` | Trading behavior (win rate, frequency, holding periods) |
+| `ibkr_fx_analysis` | FX conversion history and rate analysis |
+| `ibkr_cost_analysis` | Fee/commission breakdown |
+| `ibkr_generate_report` | Generate HTML + Markdown report files |
 
 ## Interaction Flow
 
-### Step 1: Ask the user how they want to provide data
+### Step 1: Determine data source
 
-Use AskUserQuestion to determine the data source:
+Ask the user how they want to provide data:
 
-- **Flex Web Service** — online, pulls data from IBKR's read-only reporting API
+- **Flex Web Service** (default) — online, pulls from IBKR's read-only reporting API
 - **Local file** — offline, reads a CSV or XML file exported from IBKR
 
-### Step 2: Collect credentials or file path
+### Step 2: Load data
 
-**If Flex Web Service mode:**
-
-Credentials are stored in `~/.claude/settings.json` under `pluginConfigs`. Because
-Python subprocesses launched via `uv run` do **not** inherit `CLAUDE_PLUGIN_OPTION_*`
-environment variables from Claude Code's own process, you must read the credentials
-explicitly before running the script.
-
-Use the `Read` tool to read `~/.claude/settings.json`, then locate the plugin config:
-
-```json
-{
-  "pluginConfigs": {
-    "ibkr-trade-analyzer@<marketplace-id>": {
-      "options": {
-        "ibkr_flex_token": "...",
-        "ibkr_query_id": "...",
-        "proxy": ""
-      }
-    }
-  }
-}
-```
-
-Find the key that starts with `ibkr-trade-analyzer@` (prefer non-`@inline` entries if
-multiple exist). Extract `ibkr_flex_token`, `ibkr_query_id`, and `proxy` from `options`.
-
-If no `ibkr-trade-analyzer@*` entry exists in `pluginConfigs`, guide the user to
-reinstall the plugin so credentials are saved:
+Call `ibkr_fetch_data` with the appropriate mode:
 
 ```
-/plugin install ibkr-trade-analyzer
+# Flex mode (credentials auto-injected from plugin config)
+ibkr_fetch_data(mode="flex")
+
+# Local file mode
+ibkr_fetch_data(mode="file", source="/path/to/activity.xml")
 ```
 
-To set up a Flex Query for the first time:
+Data is cached in the MCP server's memory — subsequent tool calls reuse it without re-fetching.
 
-> 1. Log into [IBKR Account Management](https://www.interactivebrokers.com/sso/Login)
-> 2. Navigate to **Performance & Reports > Flex Queries**
-> 3. Click **Create New Flex Query** (Activity Flex Query type)
->    - Enable sections: **Trades, Cash Transactions, Open Positions, Account Information**
->    - Output format: **XML** → Save → note the **Query ID**
-> 4. Go to **Performance & Reports > Flex Queries > Manage Flex Web Service**
->    - Generate or view your **Flex Web Service Token**
+### Step 3: Run analysis
 
-**If local file mode:**
+Use the specific tool that matches the user's question:
 
-Use AskUserQuestion to ask for the file path. Accept CSV or XML files. Mention that
-the user can export from IBKR via:
-- Client Portal: Performance & Reports > Statements > Activity
-- TWS: Account > Account Window > Export
+- "How's my portfolio?" → `ibkr_portfolio`
+- "What's my P&L?" → `ibkr_pnl_summary`
+- "Show my trading patterns" → `ibkr_trade_patterns`
+- "How much am I paying in fees?" → `ibkr_cost_analysis`
+- "Show FX conversions" → `ibkr_fx_analysis`
+- "Full analysis" → `ibkr_analyze` (runs all sections)
+- "Generate a report" → `ibkr_generate_report`
 
-### Step 3: Run the analysis
+For filtered analysis, use `ibkr_analyze` with parameters:
 
-Before running, verify `uv` is available:
-
-```bash
-uv --version 2>/dev/null || echo "UV_NOT_FOUND"
 ```
-
-If the output contains `UV_NOT_FOUND`, tell the user:
-
-> `uv` is required to run the analyzer in an isolated environment (no system Python pollution).
-> Install it with:
-> ```bash
-> curl -LsSf https://astral.sh/uv/install.sh | sh
-> ```
-> Then restart your terminal and try again.
-
-If `uv` is available, run the analyzer.
-
-**Flex Web Service mode** — use the credentials extracted from `~/.claude/settings.json`
-in Step 2 and pass them explicitly as environment variable prefixes, since `uv run`
-subprocesses do not inherit `CLAUDE_PLUGIN_OPTION_*` from Claude Code's process:
-
-```bash
-# Replace <TOKEN>, <QUERY_ID>, <PROXY> with values read from ~/.claude/settings.json
-CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN="<TOKEN>" \
-CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID="<QUERY_ID>" \
-CLAUDE_PLUGIN_OPTION_PROXY="<PROXY>" \
-uv run ${CLAUDE_PLUGIN_ROOT}/skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py \
-  --mode flex --output reports/
+ibkr_analyze(sections=["pnl", "trade"], period="2025-01-01:2025-12-31", asset_types="STK,OPT")
 ```
-
-**Local file mode** — no credentials needed:
-
-```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py \
-  --mode file --source "$FILE_PATH" --output reports/
-```
-
-The script uses PEP 723 inline metadata — `uv run` creates a temporary isolated venv
-automatically, installing all dependencies without touching your system Python or any
-project virtualenv.
 
 ### Step 4: Present results
 
-After the script completes:
-
-1. Read and display the terminal summary output to the user
-2. Tell the user where the detailed reports are saved:
-   - `reports/ibkr-analysis-YYYY-MM-DD.md` — full Markdown report with tables
-   - `reports/ibkr-analysis-YYYY-MM-DD.html` — interactive HTML report with plotly charts
-
-If the user wants to dive deeper into specific findings, read the Markdown report
-and discuss the details.
+All tools return structured JSON. Present the key findings conversationally.
+If the user wants a full report file, use `ibkr_generate_report` — it returns paths to
+the generated Markdown and HTML files.
 
 ## What the Analysis Covers
 
 **Trading Behavior Patterns:**
-Trade frequency distribution, holding periods by asset type (STK/OPT/FUT/CASH),
-time-of-day patterns, win rate, profit factor, trade size distribution
+Trade frequency, holding periods by asset type, time-of-day patterns, win rate,
+profit factor, trade size distribution
 
 **P&L Performance:**
 Total realized P&L, equity curve, monthly/quarterly returns, max drawdown,
-Sharpe ratio, P&L by asset type and symbol, top 10 best/worst trades
+Sharpe ratio, P&L by asset type and symbol, top winners/losers
 
 **Portfolio Structure:**
-Asset type allocation, sector concentration, long/short ratio,
-position concentration (top N holdings with per-position cost basis and unrealized P&L),
-currency exposure
+Asset allocation, sector concentration, long/short ratio, position concentration,
+currency exposure, cash balances, risk score (0-100)
 
 **Fees & Cash Flow:**
-Total commissions and trends, per-trade costs, interest income/expense,
-dividend income, financing costs, fee-to-PnL ratio
+Total commissions, per-trade costs, interest income/expense, dividend income,
+fee-to-PnL ratio
 
-**Cash & Currency Analysis:**
-Multi-currency cash balances with USD equivalent, account composition breakdown
-(cash / quasi-cash treasury ETFs / equity), total liquidity ratio.
-FX conversion history with avg rate, rate range, current rate comparison,
-rate change since conversion, and FX commission tracking per currency pair.
-
-**Trading Style Profile:**
-Auto-generated qualitative summary: trading frequency classification (day/swing/position),
-directional bias, risk profile, asset preference (ETF vs stock), income vs growth orientation,
-concentration level, cash management style, average position sizing
-
-**Portfolio Risk Assessment:**
-Scored 0-100 across 6 dimensions: concentration risk (single-stock exposure), leverage
-(leveraged ETF decay risk), drawdown history, directional risk (hedging), liquidity buffer
-(treasury/cash allocation), and fee drag. Includes specific warnings and strengths.
-
-**Price History & Trade Overlay:**
-For the top traded stock symbols, fetches historical price data via yfinance and
-overlays buy/sell markers on the price chart. Use `--no-prices` to skip this,
-or `--price-top-n N` to control how many symbols to fetch (default: 5).
+**FX Analysis:**
+Multi-currency conversion history, average rates, rate ranges, FX commissions
 
 ## Read-Only Safety Guarantees
 
-This is important context for why the skill is designed the way it is:
+1. **API level:** Flex Web Service has zero write/order endpoints
+2. **Code level:** No trading execution libraries imported
+3. **Network level:** Only outbound HTTPS to `gdcdyn.interactivebrokers.com`
+4. **File level:** Only writes to the reports output directory
 
-1. **API level:** Flex Web Service has zero write/order endpoints — it is a pure reporting service
-2. **Code level:** The Python script imports no trading execution libraries (no `ibapi`, no `ib_insync`)
-3. **Network level:** Only outbound HTTPS to `gdcdyn.interactivebrokers.com` (Flex endpoints); local file mode has zero network access
-4. **File level:** Script only writes to the `reports/` output directory
+## Credential Setup
 
-## Script Reference
-
-The analyzer is split into focused modules under `scripts/analyzers/`. For the full CLI flag reference,
-module API, and common recipes, read:
+Credentials are configured via the plugin's `userConfig` and automatically injected
+as environment variables into the MCP server. Users set them up with:
 
 ```
-${CLAUDE_PLUGIN_ROOT}/skills/ibkr-trade-analyzer/scripts/USAGE.md
+claude plugin configure ibkr-trade-analyzer
 ```
 
-Key commands at a glance:
+To create a Flex Query:
 
-| Scenario | Command |
-|----------|---------|
-| All sections (default — no flag needed) | *(omit `--analyzers`)* |
-| Only FX analysis | `--analyzers fx --no-prices` |
-| P&L + trading patterns only | `--analyzers pnl,trade` |
-| Portfolio snapshot | `--analyzers portfolio --no-prices` |
-| Skip price charts (faster, no network) | `--analyzers trade,pnl,portfolio,cost,fx` |
-| Debug — dump raw XML | add `--dump-xml debug.xml` |
-| Skip price fetch (no network) | add `--no-prices` |
-| Filter by date range | `--period 2025-01-01:2025-12-31` |
-| Filter by asset type | `--asset-types STK,OPT` |
-| Use proxy | `--proxy socks5://127.0.0.1:7980` |
-| Custom output dir | `--output /path/to/dir/` |
+> 1. Log into [IBKR Account Management](https://www.interactivebrokers.com/sso/Login)
+> 2. Navigate to **Performance & Reports > Flex Queries**
+> 3. Click **Create New Flex Query** (Activity type)
+>    - Enable: Trades, Cash Transactions, Open Positions, Account Information
+>    - Output format: XML → Save → note the **Query ID**
+> 4. Go to **Manage Flex Web Service** → generate/copy your **Token**
 
 ## Troubleshooting
 
-- **`uv` not found:** Install with `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **Missing credentials:** Read `~/.claude/settings.json` and check for a `pluginConfigs["ibkr-trade-analyzer@*"]` entry. If absent, reinstall the plugin (`/plugin install ibkr-trade-analyzer`) — credentials are saved on install. Remember to pass them explicitly to `uv run` (they are not auto-injected into subprocesses).
-- **"Token expired" error:** Flex tokens rotate — reinstall the plugin to re-enter a new token (`/plugin install ibkr-trade-analyzer`), then re-read the updated token from `~/.claude/settings.json`
-- **Rate limit (10-min cooldown):** Flex queries can run at most once per 10 minutes — tell the user to wait and retry
-- **Empty data:** The Flex Query may not include the right sections — guide the user to edit the query to include Trades + Cash Transactions
-- **XML parse error on local file:** The file may be CSV, not XML — the script auto-detects, but the user can force format with `--format csv`
+- **"Flex credentials not configured"** — run `claude plugin configure ibkr-trade-analyzer`
+- **"Token expired"** — reconfigure the plugin with a new token
+- **Rate limit (10-min cooldown)** — Flex queries run at most once per 10 minutes; wait and retry
+- **Empty data** — ensure the Flex Query includes Trades + Cash Transactions sections
+- **Local file parse error** — try specifying `mode="file"` with the correct path
+
+## CLI Usage (Power Users)
+
+The underlying scripts still work standalone:
+
+```bash
+uv run skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py --mode flex --output reports/
+uv run skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py --mode file --source data.xml
+```
+
+See `skills/ibkr-trade-analyzer/scripts/USAGE.md` for full CLI reference.

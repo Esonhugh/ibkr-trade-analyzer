@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ibkr-analyzer": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "${CLAUDE_PLUGIN_ROOT}/server/ibkr_mcp_server.py"],
+      "env": {
+        "IBKR_FLEX_TOKEN": "${user_config.ibkr_flex_token}",
+        "IBKR_QUERY_ID": "${user_config.ibkr_query_id}",
+        "PROXY": "${user_config.proxy}",
+        "CLAUDE_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}"
+      }
+    }
+  }
+}
