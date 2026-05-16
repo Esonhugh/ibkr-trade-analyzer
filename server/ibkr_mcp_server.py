@@ -120,7 +120,10 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
 
 def _json_safe(obj: Any) -> Any:
     """Make objects JSON-serializable."""
-    if isinstance(obj, datetime):
+    import datetime as _dt
+    if isinstance(obj, _dt.datetime):
+        return obj.isoformat()
+    if isinstance(obj, _dt.date):
         return obj.isoformat()
     if isinstance(obj, Path):
         return str(obj)
