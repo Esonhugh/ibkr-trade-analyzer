@@ -121,6 +121,12 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
 def _json_safe(obj: Any) -> Any:
     """Make objects JSON-serializable."""
     import datetime as _dt
+    import math
+    if isinstance(obj, float):
+        if math.isinf(obj):
+            return None
+        if math.isnan(obj):
+            return None
     if isinstance(obj, _dt.datetime):
         return obj.isoformat()
     if isinstance(obj, _dt.date):
@@ -135,9 +141,23 @@ def _json_safe(obj: Any) -> Any:
     return obj
 
 
+def _sanitize_floats(obj: Any) -> Any:
+    """Replace inf/nan with None recursively before JSON serialization."""
+    import math
+    if isinstance(obj, float):
+        if math.isinf(obj) or math.isnan(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_floats(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_floats(v) for v in obj]
+    return obj
+
+
 def _serialize(data: Any) -> str:
     """Serialize data to JSON string."""
-    return json.dumps(data, default=_json_safe, ensure_ascii=False, indent=2)
+    return json.dumps(_sanitize_floats(data), default=_json_safe, ensure_ascii=False, indent=2)
 
 
 # --- MCP Server ---
