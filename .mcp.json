@@ -10,9 +10,9 @@
             "env": {
                 "IBKR_FLEX_TOKEN": "${user_config.ibkr_flex_token}",
                 "IBKR_QUERY_ID": "${user_config.ibkr_query_id}",
-                "PROXY": "${user_config.proxy}",
-                "CLAUDE_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}"
+                "PROXY": "${user_config.proxy}"
             }
         }
     }
 }
+

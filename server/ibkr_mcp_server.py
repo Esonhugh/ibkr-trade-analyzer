@@ -26,7 +26,9 @@ from pathlib import Path
 from typing import Any
 
 # Add scripts directory to sys.path so we can import existing modules
-_plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", str(Path(__file__).parent.parent))
+# CLAUDE_PLUGIN_ROOT: prefer env var, fallback to deriving from this script's location
+# (server/ is one level below plugin root)
+_plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT") or str(Path(__file__).resolve().parent.parent)
 _scripts_dir = Path(_plugin_root) / "skills" / "ibkr-trade-analyzer" / "scripts"
 sys.path.insert(0, str(_scripts_dir))
 
