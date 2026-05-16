@@ -53,9 +53,22 @@ _session_data: AccountData | None = None
 _data_source_info: str = ""
 
 # --- Credentials from env ---
-FLEX_TOKEN = os.environ.get("IBKR_FLEX_TOKEN", "")
-QUERY_ID = os.environ.get("IBKR_QUERY_ID", "")
-PROXY = os.environ.get("PROXY", "") or os.environ.get("ALL_PROXY", "") or os.environ.get("HTTPS_PROXY", "")
+# Primary: injected by .mcp.json ${user_config.*} expansion
+# Fallback: CLAUDE_PLUGIN_OPTION_* (legacy, injected by Claude Code for subprocess skills)
+FLEX_TOKEN = (
+    os.environ.get("IBKR_FLEX_TOKEN", "")
+    or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN", "")
+)
+QUERY_ID = (
+    os.environ.get("IBKR_QUERY_ID", "")
+    or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID", "")
+)
+PROXY = (
+    os.environ.get("PROXY", "")
+    or os.environ.get("CLAUDE_PLUGIN_OPTION_PROXY", "")
+    or os.environ.get("ALL_PROXY", "")
+    or os.environ.get("HTTPS_PROXY", "")
+)
 
 
 def _data_dir() -> Path:
