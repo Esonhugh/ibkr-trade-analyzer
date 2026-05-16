@@ -74,8 +74,10 @@ PROXY = (
 
 
 def _data_dir() -> Path:
-    """Resolve data directory for caching Flex XML files."""
-    return Path(_plugin_root) / "skills" / "data"
+    """Cache directory: {plugin_root}/cache/"""
+    d = Path(_plugin_root) / "cache"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def _load_data(mode: str = "flex", source: str | None = None, force_refresh: bool = False) -> AccountData:
@@ -91,25 +93,18 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
                 "Flex credentials not configured. "
                 "Run: claude plugin configure ibkr-trade-analyzer"
             )
-        # Check for today's cached XML
+        # Check for today's cached XML: {plugin_root}/cache/flex-YYYY-MM-DD.xml
         data_dir = _data_dir()
         today_str = datetime.now().strftime("%Y-%m-%d")
-        cached_xml: Path | None = None
-        if data_dir.exists():
-            matches = sorted(
-                data_dir.glob(f"*-flex-ibkr-{today_str}.xml"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True,
-            )
-            if matches and not force_refresh:
-                cached_xml = matches[0]
+        cached_xml = data_dir / f"flex-{today_str}.xml"
 
-        if cached_xml:
+        if cached_xml.exists() and not force_refresh:
             _session_data = DataLoader.from_file(str(cached_xml), "xml")
             _data_source_info = f"Loaded from cache: {cached_xml.name}"
         else:
             _session_data = DataLoader.from_flex(
-                FLEX_TOKEN, QUERY_ID, proxy=PROXY or None, save_dir=data_dir
+                FLEX_TOKEN, QUERY_ID, proxy=PROXY or None,
+                dump_xml=str(cached_xml),
             )
             _data_source_info = f"Fetched from Flex API ({today_str})"
     elif mode == "file":
