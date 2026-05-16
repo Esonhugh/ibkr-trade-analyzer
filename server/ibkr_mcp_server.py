@@ -98,6 +98,11 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
         today_str = datetime.now().strftime("%Y-%m-%d")
         cached_xml = data_dir / f"flex-{today_str}.xml"
 
+        if not cached_xml.exists():
+            matches = sorted(data_dir.glob(f"*-flex-ibkr-{today_str}.xml"), key=lambda p: p.stat().st_mtime, reverse=True)
+            if matches:
+                cached_xml = matches[0]
+
         if cached_xml.exists() and not force_refresh:
             _session_data = DataLoader.from_file(str(cached_xml), "xml")
             _data_source_info = f"Loaded from cache: {cached_xml.name}"

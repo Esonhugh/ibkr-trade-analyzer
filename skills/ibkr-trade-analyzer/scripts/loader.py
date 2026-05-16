@@ -105,7 +105,7 @@ class DataLoader:
 
     @staticmethod
     def _autosave_xml(xml_text: str, save_dir: Path) -> Path | None:
-        """Save raw XML to *save_dir* as ``{account_id}-flex-ibkr-YYYY-MM-DD.xml``.
+        """Save raw XML to *save_dir* (typically ``{plugin_root}/cache/``) as ``{account_id}-flex-ibkr-YYYY-MM-DD.xml``.
 
         Returns the saved path, or None on failure (non-fatal).
         """

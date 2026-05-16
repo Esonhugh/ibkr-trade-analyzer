@@ -74,11 +74,8 @@ def main() -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Data directory for auto-saving / auto-loading Flex XML files.
-    # Resolved from CLAUDE_PLUGIN_ROOT env var (injected by Claude Code plugin system).
-    # Falls back to a 'data/' sibling of this script so local dev still works.
     _plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    data_dir = Path(_plugin_root) / "data" if _plugin_root else Path(__file__).parent.parent.parent / "data"
+    data_dir = Path(_plugin_root) / "cache" if _plugin_root else Path(__file__).parent.parent.parent / "cache"
 
     # Credential resolution: CLI args → plugin userConfig env vars (injected by Claude Code)
     token = args.token or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN")
@@ -99,13 +96,14 @@ def main() -> None:
             print("Or pass --token and --query-id as CLI arguments.", file=sys.stderr)
             sys.exit(1)
 
-        # Check data dir for a today's cached XML before hitting the API.
         today_str = datetime.now().strftime("%Y-%m-%d")
         cached_xml: Path | None = None
         if data_dir.exists():
-            matches = sorted(data_dir.glob(f"*-flex-ibkr-{today_str}.xml"), key=lambda p: p.stat().st_mtime, reverse=True)
-            if matches:
-                cached_xml = matches[0]
+            for pattern in [f"flex-{today_str}.xml", f"*-flex-ibkr-{today_str}.xml"]:
+                matches = sorted(data_dir.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+                if matches:
+                    cached_xml = matches[0]
+                    break
 
         if cached_xml:
             print(f"Found today's cached Flex XML: {cached_xml}")
