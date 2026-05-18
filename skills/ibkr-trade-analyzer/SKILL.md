@@ -43,7 +43,7 @@ Ask the user how they want to provide data:
 Call `ibkr_fetch_data` with the appropriate mode:
 
 ```
-# Flex mode (credentials auto-injected from plugin config)
+# Flex mode (Claude auto-injects plugin config; Codex reads inherited env vars)
 ibkr_fetch_data(mode="flex")
 
 # Local file mode
@@ -106,11 +106,20 @@ Multi-currency conversion history, average rates, rate ranges, FX commissions
 
 ## Credential Setup
 
-Credentials are configured via the plugin's `userConfig` and automatically injected
+Claude credentials are configured via the plugin's `userConfig` and automatically injected
 as environment variables into the MCP server. Users set them up with:
 
 ```
 claude plugin configure ibkr-trade-analyzer
+```
+
+For Codex, set credentials in the shell that starts Codex:
+
+```bash
+export IBKR_FLEX_TOKEN="your-token-here"
+export IBKR_QUERY_ID="123456"
+export PROXY=""  # optional
+codex
 ```
 
 To create a Flex Query:
@@ -124,7 +133,7 @@ To create a Flex Query:
 
 ## Troubleshooting
 
-- **"Flex credentials not configured"** — run `claude plugin configure ibkr-trade-analyzer`
+- **"Flex credentials not configured"** — Claude: run `claude plugin configure ibkr-trade-analyzer`; Codex: export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID`
 - **"Token expired"** — reconfigure the plugin with a new token
 - **Rate limit (10-min cooldown)** — Flex queries run at most once per 10 minutes; wait and retry
 - **Empty data** — ensure the Flex Query includes Trades + Cash Transactions sections

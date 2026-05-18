@@ -1,0 +1,20 @@
+{
+  "name": "esonhugh-ibkr-trade-analyzer",
+  "interface": {
+    "displayName": "Esonhugh IBKR Trade Analyzer"
+  },
+  "plugins": [
+    {
+      "name": "ibkr-trade-analyzer",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Finance"
+    }
+  ]
+}

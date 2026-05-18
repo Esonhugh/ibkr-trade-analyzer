@@ -1,0 +1,43 @@
+{
+  "name": "ibkr-trade-analyzer",
+  "version": "2.0.0",
+  "description": "Analyze Interactive Brokers (IBKR) trading history with read-only access. Generates reports on trading patterns, P&L performance, portfolio structure, cost basis, fees, cash flow, and FX. Supports Flex Web Service API and local CSV/XML file import.",
+  "author": {
+    "name": "Esonhugh",
+    "url": "https://github.com/Esonhugh"
+  },
+  "homepage": "https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer",
+  "repository": "https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer",
+  "license": "MIT",
+  "keywords": [
+    "ibkr",
+    "interactive-brokers",
+    "trading",
+    "portfolio",
+    "analysis",
+    "flex-query",
+    "pnl",
+    "cost-basis",
+    "finance"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.codex-mcp.json",
+  "interface": {
+    "displayName": "IBKR Trade Analyzer",
+    "shortDescription": "Read-only IBKR trade, P&L, portfolio, and fee analysis",
+    "longDescription": "Analyze Interactive Brokers activity from Flex Web Service or local CSV/XML exports. Generate structured reports for trading patterns, realized P&L, portfolio concentration, FIFO/LIFO/breakeven cost basis, fees, cash flow, FX, and risk.",
+    "developerName": "Esonhugh",
+    "category": "Finance",
+    "capabilities": [
+      "Read",
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer",
+    "defaultPrompt": [
+      "Analyze my IBKR trading history.",
+      "Summarize my IBKR portfolio risk.",
+      "Generate an IBKR P&L report."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

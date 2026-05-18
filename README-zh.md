@@ -1,9 +1,9 @@
 # IBKR Trade Analyzer
 
-[![版本](https://img.shields.io/badge/版本-1.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![版本](https://img.shields.io/badge/版本-2.0.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
-**一个用于分析 Interactive Brokers 交易历史的 Claude Code 插件 — 只读分析，零风险。**
+**一个用于分析 Interactive Brokers 交易历史的 Claude Code 与 Codex 插件 — 只读分析，零风险。**
 
 ## 功能介绍
 
@@ -21,7 +21,14 @@
 | **风险评估** | 6 个维度的 0-100 评分，附具体风险预警 |
 | **价格图表** | 叠加买卖标记的历史价格走势图 |
 
-### v1.2.0 新特性
+### v2.0.0 新特性
+
+- **双插件清单** — 同时支持 Claude Code (`.claude-plugin/plugin.json`) 和 Codex (`.codex-plugin/plugin.json`)
+- **Codex marketplace 元数据** — 新增 `.agents/plugins/marketplace.json`，可作为本地 Codex marketplace 安装
+- **双 MCP 启动路径** — Claude 继续使用 `.mcp.json`；Codex 使用 `.codex-mcp.json` 并复用同一个 MCP 服务端
+- **宿主感知缓存** — 优先使用插件宿主提供的数据目录，本地开发回退到 `cache/`
+
+### v1.2.0
 
 - **保本价/摊薄成本（富途算法）** — 计算每只标的的动态保本价：盈利卖出降低剩余持仓成本，亏损卖出抬高成本。佣金单独记录，不计入成本价（与富途/moomoo 一致）
 - **LIFO 后进先出** — 新增 LIFO 成本基准分析器，优先匹配最近买入的份额（IBKR 税务优化器的 7 种方法之一）
@@ -31,7 +38,7 @@
 
 ## 安装
 
-### 方式一：通过 Marketplace 安装（推荐）
+### 方式一：Claude Code Marketplace
 
 首先，将本仓库添加为 marketplace 源：
 
@@ -52,7 +59,26 @@ claude plugin marketplace add Esonhugh/Marketplace
 claude plugin install ibkr-trade-analyzer
 ```
 
-### 方式二：从 GitHub 克隆
+### 方式二：Codex 本地 Marketplace
+
+在本插件根目录执行：
+
+```bash
+codex plugin marketplace add "$(pwd)"
+```
+
+然后打开 Codex，在 `/plugins` 中安装 `ibkr-trade-analyzer`。
+
+Codex 不读取 Claude `userConfig`，请在启动 Codex 的 shell 中设置凭证：
+
+```bash
+export IBKR_FLEX_TOKEN="your-token-here"
+export IBKR_QUERY_ID="123456"
+export PROXY=""  # 可选
+codex
+```
+
+### 方式三：从 GitHub 克隆
 
 克隆整个 marketplace 仓库，并指定插件目录：
 
@@ -72,13 +98,13 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 
 ## 使用方法
 
-安装后，直接对 Claude 说：
+安装后，直接对 Claude 或 Codex 说：
 
 ```
 分析我的 IBKR 交易历史
 ```
 
-Claude 会引导你完成：
+助手会引导你完成：
 
 1. **选择数据来源** — Flex Web Service（在线）或本地文件（离线）
 2. **提供凭证** — Flex Token + Query ID，或文件路径
@@ -115,7 +141,7 @@ uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 4. 输出格式设为 **XML**，保存后记录 **Query ID**
 5. 在 **Manage Flex Web Service** 中获取 **Flex Token**
 
-**插件配置：** 安装时会自动提示输入凭证：
+**Claude 插件配置：** 安装时会自动提示输入凭证：
 
 ```bash
 /plugin install ibkr-trade-analyzer
@@ -123,11 +149,12 @@ uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 
 Claude Code 会提示你输入 Flex Token（加密存入系统 keychain）和 Query ID。之后每次运行自动注入，无需任何文件管理。
 
-**仅供 CI/CD 或脚本使用** — 如需在自动化脚本中使用环境变量：
+**Codex 或脚本配置** — Codex 启动内置 MCP 服务端时会继承环境变量：
 
 ```bash
-export CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN="your-token-here"
-export CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID="123456"
+export IBKR_FLEX_TOKEN="your-token-here"
+export IBKR_QUERY_ID="123456"
+export PROXY="socks5://127.0.0.1:7980"  # 可选
 ```
 
 ### 方式 B：本地文件
@@ -144,7 +171,7 @@ uv run ibkr_analyzer.py --mode file --source ~/Downloads/activity.xml --output r
 
 ## 配置
 
-凭证在安装时由 Claude Code 的内置插件设置系统提示输入，无需手动编辑任何文件。安装命令：
+Claude 凭证在安装时由 Claude Code 的内置插件设置系统提示输入；Codex 凭证从启动 Codex 进程的环境变量读取。Claude 安装命令：
 
 ```claude
 /plugin install ibkr-trade-analyzer
@@ -162,7 +189,7 @@ uv run ibkr_analyzer.py --mode file --source ~/Downloads/activity.xml --output r
 - `ibkr-analysis-YYYY-MM-DD.md` — 完整 Markdown 报告（含表格）
 - `ibkr-analysis-YYYY-MM-DD.html` — 交互式 HTML 报告（含 Plotly 图表）
 
-Flex XML 响应同时自动缓存至插件 data 目录（`$CLAUDE_PLUGIN_ROOT/data/`），文件名格式为 `{accountId}-flex-ibkr-YYYY-MM-DD.xml`。当天再次运行时自动读取缓存，无需重新调用 API。
+Flex XML 响应会缓存到插件宿主数据目录（`$PLUGIN_DATA/cache` 或 `$CLAUDE_PLUGIN_DATA/cache`），本地开发回退到 `cache/`。当天再次运行时自动读取缓存，无需重新调用 API。
 
 ## 安全保证
 

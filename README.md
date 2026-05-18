@@ -1,9 +1,9 @@
 # IBKR Trade Analyzer
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**A Claude Code plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
+**A Claude Code and Codex plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
 
 ## What It Does
 
@@ -21,7 +21,14 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 | **Risk Assessment** | Scored 0-100 across 6 dimensions with specific warnings |
 | **Price Charts** | Historical price data with buy/sell trade markers overlaid |
 
-### What's New in v1.2.0
+### What's New in v2.0.0
+
+- **Dual plugin manifests** — supports Claude Code (`.claude-plugin/plugin.json`) and Codex (`.codex-plugin/plugin.json`)
+- **Codex marketplace metadata** — adds `.agents/plugins/marketplace.json` for local Codex marketplace installation
+- **Dual MCP launch path** — Claude keeps using `.mcp.json`; Codex uses `.codex-mcp.json` and the same MCP server
+- **Host-aware cache** — uses plugin data directories when available, with local `cache/` fallback
+
+### v1.2.0
 
 - **Breakeven cost (保本价/摊薄成本)** — Futu-style breakeven price: profitable sells reduce remaining cost, losses raise it. Commission tracked separately (not folded into cost)
 - **LIFO lot matching** — Last In, First Out cost basis as a comparison method (one of IBKR's 7 Tax Optimizer methods)
@@ -31,7 +38,7 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 
 ## Installation
 
-### Method 1: Via Marketplace (Recommended)
+### Method 1: Claude Code Marketplace
 
 First, add this repository as a marketplace source:
 
@@ -52,7 +59,26 @@ claude plugin marketplace add Esonhugh/Marketplace
 claude plugin install ibkr-trade-analyzer
 ```
 
-### Method 2: Clone from GitHub
+### Method 2: Codex Local Marketplace
+
+From this plugin root, add the repo as a Codex marketplace source:
+
+```bash
+codex plugin marketplace add "$(pwd)"
+```
+
+Then open Codex and install `ibkr-trade-analyzer` from `/plugins`.
+
+Codex does not use Claude `userConfig`; set credentials in the shell that starts Codex:
+
+```bash
+export IBKR_FLEX_TOKEN="your-token-here"
+export IBKR_QUERY_ID="123456"
+export PROXY=""  # optional
+codex
+```
+
+### Method 3: Clone from GitHub
 
 Clone the entire marketplace repo and point Claude Code to the plugin directory:
 
@@ -72,13 +98,13 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 
 ## Usage
 
-Once installed, simply tell Claude:
+Once installed, simply tell Claude or Codex:
 
 ```
 Analyze my IBKR trading history
 ```
 
-Claude will guide you through:
+The assistant will guide you through:
 
 1. **Choose data source** — Flex Web Service (online) or local file (offline)
 2. **Provide credentials** — Flex Token + Query ID, or a file path
@@ -115,7 +141,7 @@ Pulls data directly from IBKR's read-only reporting API.
 4. Set output format to **XML**, save and note the **Query ID**
 5. Under **Manage Flex Web Service**, get your **Flex Token**
 
-**Plugin Configuration:** Credentials are prompted automatically when you install the plugin:
+**Claude plugin configuration:** Credentials are prompted automatically when you install the plugin:
 
 ```claude
 /plugin install ibkr-trade-analyzer
@@ -125,16 +151,17 @@ Claude Code will prompt you for your Flex Token (stored securely in system keych
 and Query ID. Credentials are injected automatically on every future run — no files to
 manage, no `.gitignore` entries needed.
 
-**For CI/CD or scripting only** — for automation without the interactive prompt, use environment variables:
+**Codex or scripting configuration** — Codex inherits environment variables when launching the bundled MCP server:
 
 ```bash
-export CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN="your-token-here"
-export CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID="123456"
+export IBKR_FLEX_TOKEN="your-token-here"
+export IBKR_QUERY_ID="123456"
+export PROXY="socks5://127.0.0.1:7980"  # optional
 ```
 
 ## Configuration
 
-Credentials are configured at install time via Claude Code's built-in settings system — no manual file editing required. To update credentials, reinstall or set environment variables directly.
+Claude credentials are configured at install time via Claude Code's built-in settings system. Codex credentials are read from environment variables inherited by the Codex process.
 
 | Field | Sensitive | Description |
 |-------|-----------|-------------|
@@ -160,7 +187,7 @@ Reports are saved to `reports/`:
 - `ibkr-analysis-YYYY-MM-DD.md` — full Markdown report with tables
 - `ibkr-analysis-YYYY-MM-DD.html` — interactive HTML report with Plotly charts
 
-The Flex XML response is also auto-cached to the plugin data dir (`$CLAUDE_PLUGIN_ROOT/data/`) as `{accountId}-flex-ibkr-YYYY-MM-DD.xml`. Subsequent runs on the same day skip the API call and load from cache automatically.
+The Flex XML response is cached under the plugin host data directory (`$PLUGIN_DATA/cache` or `$CLAUDE_PLUGIN_DATA/cache`), with local `cache/` fallback. Subsequent runs on the same day skip the API call and load from cache automatically.
 
 ## Safety Guarantees
 

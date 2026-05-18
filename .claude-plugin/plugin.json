@@ -25,7 +25,7 @@
       "type": "string",
       "title": "Flex Token",
       "description": "IBKR Flex Web Service token (read-only reporting API key). To obtain: log into Account Management (https://www.interactivebrokers.com/sso/Login) → Performance & Reports → Flex Queries → Manage Flex Web Service → Create or copy your token. This token only grants access to reporting endpoints — it cannot place orders or modify your account.",
-      "sensitive": false,
+      "sensitive": true,
       "required": true
     },
     "ibkr_query_id": {

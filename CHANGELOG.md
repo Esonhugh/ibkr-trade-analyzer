@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0] - 2026-05-18
+
+### Added
+
+- Codex plugin manifest at `.codex-plugin/plugin.json`.
+- Codex local marketplace entry at `.agents/plugins/marketplace.json`.
+- Codex-specific MCP config at `.codex-mcp.json` that reuses the existing stdio MCP server.
+
+### Changed
+
+- MCP server now resolves both Codex (`PLUGIN_ROOT`, `PLUGIN_DATA`) and Claude (`CLAUDE_PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`) plugin host paths.
+- Claude Flex token config is marked sensitive.
+
 ## [1.2.0] - 2026-05-09
 
 ### Added

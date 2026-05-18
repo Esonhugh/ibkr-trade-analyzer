@@ -9,10 +9,10 @@
 #     "yfinance>=0.2",
 # ]
 # ///
-"""IBKR Trade Analyzer — stdio MCP server.
+"""IBKR Trade Analyzer - stdio MCP server.
 
 Exposes structured tools for analyzing Interactive Brokers trading data.
-Reads credentials from environment variables injected by Claude Code plugin system.
+Reads credentials from environment variables injected by Claude Code or Codex.
 Imports existing analyzer modules from the scripts/ directory.
 """
 
@@ -25,10 +25,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# Add scripts directory to sys.path so we can import existing modules
-# CLAUDE_PLUGIN_ROOT: prefer env var, fallback to deriving from this script's location
-# (server/ is one level below plugin root)
-_plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT") or str(Path(__file__).resolve().parent.parent)
+def _first_env(*names: str) -> str:
+    """Return the first non-empty environment variable from names."""
+    for name in names:
+        value = os.environ.get(name)
+        if value:
+            return value
+    return ""
+
+
+# Add scripts directory to sys.path so we can import existing modules.
+# Prefer host-provided plugin root env vars, then derive from this file.
+_plugin_root = (
+    _first_env("PLUGIN_ROOT", "CODEX_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT")
+    or str(Path(__file__).resolve().parent.parent)
+)
+_plugin_data = _first_env("PLUGIN_DATA", "CODEX_PLUGIN_DATA", "CLAUDE_PLUGIN_DATA")
 _scripts_dir = Path(_plugin_root) / "skills" / "ibkr-trade-analyzer" / "scripts"
 sys.path.insert(0, str(_scripts_dir))
 
@@ -55,27 +67,37 @@ _session_data: AccountData | None = None
 _data_source_info: str = ""
 
 # --- Credentials from env ---
-# Primary: injected by .mcp.json ${user_config.*} expansion
-# Fallback: CLAUDE_PLUGIN_OPTION_* (legacy, injected by Claude Code for subprocess skills)
+# Primary: injected by Claude .mcp.json ${user_config.*} expansion or inherited by Codex.
+# Fallback: *_PLUGIN_OPTION_* names used by plugin host subprocess integrations.
 FLEX_TOKEN = (
-    os.environ.get("IBKR_FLEX_TOKEN", "")
-    or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN", "")
+    _first_env(
+        "IBKR_FLEX_TOKEN",
+        "CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN",
+        "CODEX_PLUGIN_OPTION_IBKR_FLEX_TOKEN",
+    )
 )
 QUERY_ID = (
-    os.environ.get("IBKR_QUERY_ID", "")
-    or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID", "")
+    _first_env(
+        "IBKR_QUERY_ID",
+        "CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID",
+        "CODEX_PLUGIN_OPTION_IBKR_QUERY_ID",
+    )
 )
 PROXY = (
-    os.environ.get("PROXY", "")
-    or os.environ.get("CLAUDE_PLUGIN_OPTION_PROXY", "")
-    or os.environ.get("ALL_PROXY", "")
-    or os.environ.get("HTTPS_PROXY", "")
+    _first_env(
+        "PROXY",
+        "CLAUDE_PLUGIN_OPTION_PROXY",
+        "CODEX_PLUGIN_OPTION_PROXY",
+        "ALL_PROXY",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+    )
 )
 
 
 def _data_dir() -> Path:
-    """Cache directory: {plugin_root}/cache/"""
-    d = Path(_plugin_root) / "cache"
+    """Writable cache directory for plugin hosts and local development."""
+    d = Path(_plugin_data) / "cache" if _plugin_data else Path(_plugin_root) / "cache"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -91,9 +113,10 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
         if not FLEX_TOKEN or not QUERY_ID:
             raise RuntimeError(
                 "Flex credentials not configured. "
-                "Run: claude plugin configure ibkr-trade-analyzer"
+                "For Claude, run: claude plugin configure ibkr-trade-analyzer. "
+                "For Codex, export IBKR_FLEX_TOKEN and IBKR_QUERY_ID before starting Codex."
             )
-        # Check for today's cached XML: {plugin_root}/cache/flex-YYYY-MM-DD.xml
+        # Check for today's cached XML in the host data cache.
         data_dir = _data_dir()
         today_str = datetime.now().strftime("%Y-%m-%d")
         cached_xml = data_dir / f"flex-{today_str}.xml"
