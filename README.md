@@ -111,6 +111,20 @@ The assistant will guide you through:
 3. **Run analysis** — automated, produces Markdown + interactive HTML reports
 4. **Review results** — discuss findings interactively
 
+### Workflow Commands
+
+The plugin also exposes command-style workflows for common reviews:
+
+| Command | Use When | Main Tools |
+|---------|----------|------------|
+| `/ibkr-trade-analyzer:summary` | One-page account summary | `ibkr_pnl_summary`, `ibkr_portfolio`, `ibkr_cost_analysis` |
+| `/ibkr-trade-analyzer:portfolio` | Holdings, allocation, concentration, position sizing | `ibkr_portfolio` |
+| `/ibkr-trade-analyzer:cash-fx` | Cash balances, currency exposure, conversion considerations | `ibkr_portfolio`, `ibkr_fx_analysis`, `ibkr_cost_analysis` |
+| `/ibkr-trade-analyzer:report` | Generate Markdown and HTML reports | `ibkr_generate_report` |
+| `/ibkr-trade-analyzer:analyze` | Targeted section analysis with filters | `ibkr_analyze` |
+
+Cash-FX and portfolio outputs are informational analysis only. They do not place trades, convert currency, or provide investment or tax advice.
+
 ### Selective Analysis
 
 Run only specific sections with `--analyzers`:

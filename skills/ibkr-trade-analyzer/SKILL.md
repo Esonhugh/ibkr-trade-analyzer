@@ -2,150 +2,101 @@
 name: ibkr-trade-analyzer
 description: >
   Analyze Interactive Brokers (IBKR) trading history with read-only access.
-  Generates comprehensive reports on trading patterns, P&L performance, portfolio structure,
-  and fee analysis. Supports Flex Web Service API and local CSV/XML file import.
-  Use this skill whenever the user mentions IBKR trading analysis, Interactive Brokers
-  trade history, portfolio review, trading pattern analysis, P&L breakdown, or wants to
-  understand their brokerage trading behavior. Also trigger when the user mentions
-  Flex Query, activity statement, trade log analysis, or asks about their win rate,
-  Sharpe ratio, max drawdown, or commission costs from IBKR.
+  Use for IBKR / Interactive Brokers / Flex Query / activity statement analysis,
+  including account summary reports, portfolio review, position sizing, cash and FX exposure,
+  P&L breakdown, win rate, Sharpe ratio, max drawdown, commissions, fees, cost basis,
+  breakeven / 保本价 / 摊薄成本, FIFO/LIFO, 现金换汇建议, 持仓分析, 盈亏分析,
+  交易复盘, 账户摘要, and brokerage trading behavior.
 ---
 
 # IBKR Trade Analyzer
 
-Analyze Interactive Brokers trading history using **read-only** data access via MCP tools.
-The plugin exposes structured tools that return JSON results — no subprocess orchestration needed.
+Analyze Interactive Brokers trading history using **read-only** MCP tools. Follow the user's language for the response.
+
+This skill is an intent router: identify what the user wants, load data once, call the smallest set of tools that answers the question, and present a structured report.
+
+## Safety Boundary
+
+- Flex Web Service is read-only reporting data.
+- Never place trades, convert currency, create orders, or modify account settings.
+- Cash-FX, portfolio, and risk comments are informational analysis, not investment, tax, or FX trading advice.
+- Do not invent missing account totals, live prices, or FX rates.
+
+## Data Loading
+
+Before any analysis, ensure data is loaded:
+
+- Flex mode: call `ibkr_fetch_data(mode="flex")`.
+- Local file mode: call `ibkr_fetch_data(mode="file", source="/path/to/activity.xml")`.
+- If credentials are missing, tell Claude users to run `claude plugin configure ibkr-trade-analyzer`; tell Codex users to export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID` before starting Codex.
+
+Data is cached in the MCP server session. Do not reload unless the user asks for `force_refresh` or changes the source file.
+
+## Intent Router
+
+| User Intent | Examples | Preferred Tool or Command Workflow |
+|---|---|---|
+| Account summary | summary report, 一页纸总结, quick review, 账户摘要 | `ibkr_pnl_summary` + `ibkr_portfolio` + `ibkr_cost_analysis`; use `/ibkr-trade-analyzer:summary` when slash commands are available |
+| Portfolio / positions | holdings, position sizing, 仓位, 持仓, concentration | `ibkr_portfolio`; use `/ibkr-trade-analyzer:portfolio` when available |
+| Cash and FX | cash balance, FX exposure, 现金换汇建议, currency exposure | `ibkr_portfolio` + `ibkr_fx_analysis` + `ibkr_cost_analysis`; use `/ibkr-trade-analyzer:cash-fx` when available |
+| P&L performance | realized P&L, Sharpe, drawdown, monthly returns, 盈亏 | `ibkr_pnl_summary` |
+| Trading behavior | win rate, frequency, holding period, profit factor, 交易习惯 | `ibkr_trade_patterns` |
+| Costs and fees | commissions, interest, dividends, fee drag, 手续费 | `ibkr_cost_analysis` |
+| Cost basis | breakeven, 保本价, 摊薄成本, FIFO, LIFO | `ibkr_analyze(sections=["diluted_cost"])` |
+| Full report | generate report, export HTML, 导出报告 | `ibkr_generate_report`; use `/ibkr-trade-analyzer:report` when available |
+| Filtered advanced analysis | date range, asset type, STK/OPT only | `ibkr_analyze(sections=[...], period="YYYY-MM-DD:YYYY-MM-DD", asset_types="STK,OPT")` |
+
+Ask one clarifying question only when the data source or intended section cannot be inferred.
 
 ## Available MCP Tools
 
 | Tool | Use When |
 |------|----------|
-| `ibkr_fetch_data` | First call — loads data from Flex API or local file. Caches in session. |
-| `ibkr_analyze` | Full or partial analysis with optional filters (period, asset types) |
-| `ibkr_portfolio` | Quick portfolio snapshot (positions, cash, risk score) |
-| `ibkr_pnl_summary` | P&L overview (total, Sharpe, drawdown, equity curve) |
-| `ibkr_trade_patterns` | Trading behavior (win rate, frequency, holding periods) |
-| `ibkr_fx_analysis` | FX conversion history and rate analysis |
-| `ibkr_cost_analysis` | Fee/commission breakdown |
-| `ibkr_generate_report` | Generate HTML + Markdown report files |
+| `ibkr_fetch_data` | First call — loads Flex API data or a local CSV/XML file. |
+| `ibkr_analyze` | Filtered or multi-section analysis with optional `period` and `asset_types`. |
+| `ibkr_portfolio` | Portfolio snapshot: positions, cash, allocation, concentration, risk score. |
+| `ibkr_pnl_summary` | P&L overview: total, Sharpe, drawdown, monthly returns, winners/losers. |
+| `ibkr_trade_patterns` | Trading behavior: win rate, frequency, holding periods, profit factor. |
+| `ibkr_fx_analysis` | FX conversion history, average rates, ranges, FX commissions. |
+| `ibkr_cost_analysis` | Commissions, interest, dividends, and fee-to-P&L ratio. |
+| `ibkr_generate_report` | Generate Markdown and HTML report files. |
 
-## Interaction Flow
+## Output Templates
 
-### Step 1: Determine data source
+### Summary Report
 
-Ask the user how they want to provide data:
+Use this format for account summaries:
 
-- **Flex Web Service** (default) — online, pulls from IBKR's read-only reporting API
-- **Local file** — offline, reads a CSV or XML file exported from IBKR
+1. **Executive Summary** — 5 bullets maximum.
+2. **Key Metrics** — compact table.
+3. **Portfolio & Risk** — concentration, cash, currency, risk score.
+4. **Costs & Friction** — commissions, interest, dividends, fee burden.
+5. **Watch Items** — things to review, not trading instructions.
 
-### Step 2: Load data
+### Portfolio Review
 
-Call `ibkr_fetch_data` with the appropriate mode:
+Use this format for holdings and position sizing:
 
-```
-# Flex mode (Claude auto-injects plugin config; Codex reads inherited env vars)
-ibkr_fetch_data(mode="flex")
+1. **Portfolio Snapshot**.
+2. **Top Positions** — top 10 by exposure when available.
+3. **Allocation** — asset class, currency, sector, long/short when available.
+4. **Concentration Review**.
+5. **Position Sizing Notes**.
 
-# Local file mode
-ibkr_fetch_data(mode="file", source="/path/to/activity.xml")
-```
+### Cash-FX Review
 
-Data is cached in the MCP server's memory — subsequent tool calls reuse it without re-fetching.
+Use this format for currency questions:
 
-### Step 3: Run analysis
-
-Use the specific tool that matches the user's question:
-
-- "How's my portfolio?" → `ibkr_portfolio`
-- "What's my P&L?" → `ibkr_pnl_summary`
-- "Show my trading patterns" → `ibkr_trade_patterns`
-- "How much am I paying in fees?" → `ibkr_cost_analysis`
-- "Show FX conversions" → `ibkr_fx_analysis`
-- "Full analysis" → `ibkr_analyze` (runs all sections)
-- "Generate a report" → `ibkr_generate_report`
-
-For filtered analysis, use `ibkr_analyze` with parameters:
-
-```
-ibkr_analyze(sections=["pnl", "trade"], period="2025-01-01:2025-12-31", asset_types="STK,OPT")
-```
-
-### Step 4: Present results
-
-All tools return structured JSON. Present the key findings conversationally.
-If the user wants a full report file, use `ibkr_generate_report` — it returns paths to
-the generated Markdown and HTML files.
-
-## What the Analysis Covers
-
-**Trading Behavior Patterns:**
-Trade frequency, holding periods by asset type, time-of-day patterns, win rate,
-profit factor, trade size distribution
-
-**P&L Performance:**
-Total realized P&L, equity curve, monthly/quarterly returns, max drawdown,
-Sharpe ratio, P&L by asset type and symbol, top winners/losers
-
-**Portfolio Structure:**
-Asset allocation, sector concentration, long/short ratio, position concentration,
-currency exposure, cash balances, risk score (0-100)
-
-**Fees & Cash Flow:**
-Total commissions, per-trade costs, interest income/expense, dividend income,
-fee-to-PnL ratio
-
-**FX Analysis:**
-Multi-currency conversion history, average rates, rate ranges, FX commissions
-
-## Read-Only Safety Guarantees
-
-1. **API level:** Flex Web Service has zero write/order endpoints
-2. **Code level:** No trading execution libraries imported
-3. **Network level:** Only outbound HTTPS to `gdcdyn.interactivebrokers.com`
-4. **File level:** Only writes to the reports output directory
-
-## Credential Setup
-
-Claude credentials are configured via the plugin's `userConfig` and automatically injected
-as environment variables into the MCP server. Users set them up with:
-
-```
-claude plugin configure ibkr-trade-analyzer
-```
-
-For Codex, set credentials in the shell that starts Codex:
-
-```bash
-export IBKR_FLEX_TOKEN="your-token-here"
-export IBKR_QUERY_ID="123456"
-export PROXY=""  # optional
-codex
-```
-
-To create a Flex Query:
-
-> 1. Log into [IBKR Account Management](https://www.interactivebrokers.com/sso/Login)
-> 2. Navigate to **Performance & Reports > Flex Queries**
-> 3. Click **Create New Flex Query** (Activity type)
->    - Enable: Trades, Cash Transactions, Open Positions, Account Information
->    - Output format: XML → Save → note the **Query ID**
-> 4. Go to **Manage Flex Web Service** → generate/copy your **Token**
+1. **Cash Overview** — by currency.
+2. **Currency Exposure**.
+3. **FX History**.
+4. **Conversion Considerations** — `Currency exposures to review`, `Operational balances to review`, `Monitor`.
+5. **Risks & Caveats** — include informational-analysis disclaimer.
 
 ## Troubleshooting
 
-- **"Flex credentials not configured"** — Claude: run `claude plugin configure ibkr-trade-analyzer`; Codex: export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID`
-- **"Token expired"** — reconfigure the plugin with a new token
-- **Rate limit (10-min cooldown)** — Flex queries run at most once per 10 minutes; wait and retry
-- **Empty data** — ensure the Flex Query includes Trades + Cash Transactions sections
-- **Local file parse error** — try specifying `mode="file"` with the correct path
-
-## CLI Usage (Power Users)
-
-The underlying scripts still work standalone:
-
-```bash
-uv run skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py --mode flex --output reports/
-uv run skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py --mode file --source data.xml
-```
-
-See `skills/ibkr-trade-analyzer/scripts/USAGE.md` for full CLI reference.
+- `Flex credentials not configured` — Claude: run `claude plugin configure ibkr-trade-analyzer`; Codex: export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID` before starting Codex.
+- `Token expired` — reconfigure the plugin with a new Flex token.
+- Rate limit or cooldown — IBKR Flex can rate-limit repeated queries; use cached data or wait.
+- Empty data — confirm the Flex Query includes Trades, Cash Transactions, Open Positions, and Account Information.
+- Local file parse error — verify the file path and prefer XML exports.

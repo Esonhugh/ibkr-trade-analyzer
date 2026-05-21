@@ -34,9 +34,9 @@
     ],
     "websiteURL": "https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer",
     "defaultPrompt": [
-      "Analyze my IBKR trading history.",
-      "Summarize my IBKR portfolio risk.",
-      "Generate an IBKR P&L report."
+      "Generate an IBKR account summary.",
+      "Review my IBKR portfolio and position risk.",
+      "Analyze my IBKR cash and FX exposure."
     ],
     "brandColor": "#0F766E"
   }

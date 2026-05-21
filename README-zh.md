@@ -111,6 +111,20 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 3. **运行分析** — 自动执行，生成 Markdown + 交互式 HTML 报告
 4. **查看结果** — 与 Claude 交互讨论分析发现
 
+### 工作流命令
+
+插件也提供面向常见复盘场景的命令式工作流：
+
+| 命令 | 适用场景 | 主要工具 |
+|------|----------|----------|
+| `/ibkr-trade-analyzer:summary` | 一页纸账户摘要 | `ibkr_pnl_summary`, `ibkr_portfolio`, `ibkr_cost_analysis` |
+| `/ibkr-trade-analyzer:portfolio` | 持仓、仓位、集中度、配置比例 | `ibkr_portfolio` |
+| `/ibkr-trade-analyzer:cash-fx` | 现金余额、币种敞口、换汇观察 | `ibkr_portfolio`, `ibkr_fx_analysis`, `ibkr_cost_analysis` |
+| `/ibkr-trade-analyzer:report` | 生成 Markdown 和 HTML 完整报告 | `ibkr_generate_report` |
+| `/ibkr-trade-analyzer:analyze` | 带时间或资产类型过滤的定向分析 | `ibkr_analyze` |
+
+现金换汇和仓位输出仅供信息分析参考，不会下单、不会换汇，也不构成投资或税务建议。
+
 ### 选择性分析
 
 使用 `--analyzers` 仅运行指定板块：
