@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A Claude Code and Codex plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
@@ -21,12 +21,12 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 | **Risk Assessment** | Scored 0-100 across 6 dimensions with specific warnings |
 | **Price Charts** | Historical price data with buy/sell trade markers overlaid |
 
-### What's New in v2.0.0
+### What's New in v2.1.0
 
-- **Dual plugin manifests** — supports Claude Code (`.claude-plugin/plugin.json`) and Codex (`.codex-plugin/plugin.json`)
-- **Codex marketplace metadata** — adds `.agents/plugins/marketplace.json` for local Codex marketplace installation
-- **Dual MCP launch path** — Claude keeps using `.mcp.json`; Codex uses `.codex-mcp.json` and the same MCP server
-- **Host-aware cache** — uses plugin data directories when available, with local `cache/` fallback
+- **Workflow commands** — adds account summary, portfolio, cash/FX, report generation, and targeted analysis command workflows.
+- **Improved skill routing** — maps natural-language IBKR requests to focused read-only MCP workflows.
+- **Stronger command validation** — packaging tests now verify command frontmatter and allowed MCP tool references.
+- **Updated default prompts** — Codex prompts now highlight summary, portfolio, and cash/FX reviews.
 
 ### v1.2.0
 

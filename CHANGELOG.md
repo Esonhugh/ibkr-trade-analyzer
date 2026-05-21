@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0] - 2026-05-21
+
+### Added
+
+- Workflow command docs for account summary, portfolio review, cash/FX review, full reports, and targeted analysis.
+- Command packaging validation for frontmatter and allowed IBKR MCP tools.
+
+### Changed
+
+- Skill routing now maps natural-language IBKR requests to focused MCP workflows.
+- README usage docs now describe the new command-style workflows.
+- Codex default prompts now highlight summary, portfolio, and cash/FX reviews.
+
 ## [2.0.0] - 2026-05-18
 
 ### Added
