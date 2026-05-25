@@ -23,9 +23,9 @@
 
 ### v2.0.0 新特性
 
-- **双插件清单** — 同时支持 Claude Code (`.claude-plugin/plugin.json`) 和 Codex (`.codex-plugin/plugin.json`)
-- **Codex marketplace 元数据** — 新增 `.agents/plugins/marketplace.json`，可作为本地 Codex marketplace 安装
-- **双 MCP 启动路径** — Claude 继续使用 `.mcp.json`；Codex 使用 `.codex-mcp.json` 并复用同一个 MCP 服务端
+- **Claude Code 插件清单** — 当前 checkout 包含 Claude Code 插件清单 (`.claude-plugin/plugin.json`)
+- **可选 Codex packaging** — Codex 清单 (`.codex-plugin/plugin.json`)、marketplace 元数据 (`.agents/plugins/marketplace.json`) 和 Codex MCP 配置 (`.codex-mcp.json`) 属于可选 packaging surface，当前 checkout 未包含这些文件
+- **宿主 MCP 启动路径** — Claude 继续使用 `.mcp.json`；包含 Codex packaging 的分发包可通过 `.codex-mcp.json` 复用同一个 MCP 服务端
 - **宿主感知缓存** — 优先使用插件宿主提供的数据目录，本地开发回退到 `cache/`
 
 ### v1.2.0
@@ -60,6 +60,8 @@ claude plugin install ibkr-trade-analyzer
 ```
 
 ### 方式二：Codex 本地 Marketplace
+
+Codex packaging 是可选内容，并非每个 checkout 都包含。当前 checkout 未包含 `.codex-plugin/plugin.json`、`.agents/plugins/marketplace.json` 和 `.codex-mcp.json`；只有在使用包含这些文件的分发包时才使用此方式。
 
 在本插件根目录执行：
 
@@ -140,7 +142,7 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx --no-pr
 uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 ```
 
-可用板块：`trade`、`pnl`、`portfolio`、`cost`、`price`、`fx`、`diluted_cost`（默认：全部）。
+可用 `--analyzers` 板块：`trade`、`pnl`、`portfolio`、`cost`、`price`、`fx`、`diluted_cost`（独立 CLI）以及 `china_tax`（MCP `ibkr_analyze`）。
 
 ## 数据来源
 

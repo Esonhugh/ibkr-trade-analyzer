@@ -2,9 +2,9 @@
 
 Last reviewed: 2026-05-24. Recheck official IRS, State Taxation Administration, and treaty sources for the relevant tax year before preparing an actual filing.
 
-Implementation status: research/reference and command workflows exist; deterministic annual calculator code is proposed but not implemented.
+Implementation status: reference workflows, command workflows, `scripts/china_tax_self_check.py`, and the Phase 1 `ibkr_china_tax_annual_calc` MCP tool exist for dividend/withholding evidence reports. Advanced realized-gain tax treatment remains future work.
 
-This reference summarizes official-source rules and an implementation plan for a future `china-tax-annual-calc` workflow. It is a tax-data preparation and calculation reference, not legal, tax, or investment advice. Always label output as an informational estimate and recommend confirmation with a qualified tax professional or the competent tax authority before filing.
+This reference summarizes official-source rules and implementation guidance for China resident overseas-investment tax evidence workflows. It is a tax-data preparation and calculation reference, not legal, tax, or investment advice. Always label output as an informational estimate and recommend confirmation with a qualified tax professional or the competent tax authority before filing.
 
 ## Official Source Baseline
 
@@ -86,12 +86,13 @@ Start with an annual calculation for China tax residents holding overseas broker
 
 Implement these categories first:
 
-1. U.S.-source dividends from 1042-S and/or IBKR Flex cash transactions.
-2. U.S. federal withholding tax from 1042-S and/or IBKR Flex withholding-tax cash transactions.
+1. U.S.-source dividends from IBKR Flex cash transactions as the primary data source.
+2. U.S. federal withholding tax from IBKR Flex withholding-tax cash transactions as the primary data source.
 3. China IIT estimate for interest/dividends/bonus income using a configurable rate, default 20% for estimate only.
 4. Foreign tax credit limit and estimated China top-up tax for dividends.
-5. RMB translation using a configurable FX mode; default to a conservative explicit mode requiring supplied RMB rates rather than silently inventing rates.
+5. RMB translation using auditable FX evidence; Phase 1 can use same-tax-year IBKR USD/RMB FX trade evidence when available, without silently inventing rates.
 6. Markdown and CSV output for evidence review.
+7. 1042-S is optional follow-up reconciliation/evidence check, not a required Phase 1 input.
 
 ### Phase 2 Scope
 
@@ -101,7 +102,7 @@ Add after Phase 1 is validated:
 2. Security-by-security cost basis evidence and commission handling.
 3. Country/region credit-limit grouping.
 4. Excess foreign tax carryforward schedule.
-5. 1042-S PDF/text import if reliable extraction is available.
+5. 1042-S PDF/text import or manual 1042-S CSV reconciliation if reliable extraction is available.
 6. Annual tax package generation matching “境外所得个人所得税抵免明细表” columns.
 
 ## Data Mapping
@@ -223,65 +224,59 @@ Design takeaways for this plugin:
 - Separate tax-law authority from calculator convenience. The web app is an implementation pattern, not an authority.
 - Expose assumptions such as cross-market loss offset as configurable review scenarios, not default legal conclusions.
 
-## Proposed Future Implementation Plan
+## Current Implementation Surfaces
 
-### 1. Add Analyzer Module
+### Analyzer Module
 
-Create `scripts/analyzers/china_tax.py` with pure functions:
+The existing analyzer module `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py` provides deterministic Phase 1 dividend/withholding evidence functions for loaded IBKR data:
 
-- `class ChinaTaxConfig`: tax year, resident country, China tax rates, FX mode, treaty sanity-check options.
-- `collect_dividend_items(data)`: extract gross dividends and withholding taxes from loaded IBKR data.
-- `group_by_country_category(items)`: aggregate income and withholding by country/region and China tax category.
-- `translate_to_rmb(items, fx_provider)`: convert original currency amounts to RMB using explicit rate records.
-- `calculate_foreign_tax_credit(groups, config)`: compute credit limit, creditable tax, estimated top-up, and excess carryforward.
-- `build_china_tax_report(result)`: produce Markdown-ready structures and CSV rows.
+- `ChinaTaxConfig`: tax year, China tax rates, FX mode, and treaty sanity-check options.
+- Dividend and withholding collection from loaded IBKR cash transactions.
+- Country/category grouping, RMB translation from explicit or IBKR FX evidence, foreign-tax-credit estimates, and Markdown/CSV-ready report structures.
+
+The local-file self-check CLI `skills/china-tax/scripts/china_tax_self_check.py` provides offline evidence parsing and report generation for Flex XML/CSV, 1042-S CSV, explicit RMB FX CSV, and IBKR tax-report ZIP evidence.
 
 Keep functions deterministic and testable. Avoid network FX calls in Phase 1 unless explicitly requested.
 
-### 2. Add CLI / MCP Surface
+### CLI / MCP Surface
 
-Add one MCP tool or analysis section:
+Current surfaces:
 
-- Preferred MCP tool name: `ibkr_china_tax_annual_calc`.
-- Alternative generic analyzer section: `ibkr_analyze(sections=["china_tax"], period="YYYY-01-01:YYYY-12-31")`.
+- MCP tool: `ibkr_china_tax_annual_calc` for loaded Flex data Phase 1 dividend/withholding estimates.
+- Local-file CLI: `skills/china-tax/scripts/china_tax_self_check.py` for offline evidence reports.
+- Commands: `commands/china-tax-annual.md` and `commands/china-tax-year-end-plan.md`.
 
-Suggested parameters:
+Key parameters and inputs:
 
-| Parameter | Purpose |
-|---|---|
-| `tax_year` | Annual calculation year |
-| `source` | `flex`, `file`, or `1042s` later |
-| `china_iit_dividend_rate` | Default 0.20 estimate |
-| `fx_mode` | `provided`, `monthly_previous_last_day`, `annual_previous_year_end`, `none` |
-| `rmb_rates_file` | CSV of currency/date/rate evidence |
-| `include_realized_pnl` | False in Phase 1 |
-| `output_csv` | Optional path for CSV evidence tables |
-
-### 3. Add Commands
-
-Use two commands that both reference the `china-tax` skill:
-
-- `commands/china-tax-annual.md` — annual filing evidence review and informational calculation workflow.
-- `commands/china-tax-year-end-plan.md` — year-end overseas tax planning and evidence-readiness workflow.
+| Surface | Parameter / input | Purpose |
+|---|---|---|
+| MCP | `tax_year` | Annual calculation year |
+| MCP | `china_iit_dividend_rate` | Default 0.20 informational estimate |
+| MCP | `output_csv` | Optional CSV evidence output directory |
+| CLI | `--form-1042s` | Optional structured 1042-S CSV reconciliation evidence |
+| CLI | `--fx-rates` | Optional explicit currency-to-RMB CSV evidence |
+| CLI | `--tax-report-zip` | Optional IBKR tax-report ZIP inspection |
+| CLI | `--planning` | Year-end planning/evidence-readiness report mode |
 
 Annual command workflow:
 
-1. Load Flex data.
+1. Load Flex data as the primary calculation source or use local files through the CLI.
 2. Ask for tax year if absent.
-3. Ask for RMB FX conversion source if not provided.
-4. Run the future deterministic annual calculator when implemented; until then, prepare evidence tables and manual estimate scaffolding.
+3. Ask for RMB FX conversion source only if same-tax-year IBKR USD/RMB FX trade evidence is unavailable or the user wants a different documented rate source.
+4. Run the Phase 1 dividend/withholding calculator or local-file self-check script; mark 1042-S as optional reconciliation/evidence check.
 5. Return Markdown report with official-source disclaimer and filing checklist.
 
-### 4. Add Tests
+### Test Coverage
 
-Add tests with small fixture data:
+Current tests cover small fixture data and safety paths:
 
 - U.S. dividend 100 USD, U.S. withholding 10 USD, China rate 20%, RMB rate 7.0 → China tax 140 RMB, credit 70 RMB, top-up 70 RMB.
 - U.S. dividend 100 USD, U.S. withholding 30 USD, China rate 20%, RMB rate 7.0 → China tax 140 RMB, credit 140 RMB, top-up 0, excess 70 RMB.
-- Missing FX rate → explicit error, no invented RMB amount.
-- Treaty sanity check 10%, 30%, and unusual rate.
+- Missing FX rate → `review_required`, no invented RMB amount.
+- Local-file CLI path handling, including paths containing spaces.
+- Deterministic Markdown output ordering.
 
-### 5. Guardrails
+### Guardrails
 
 - Never state that a calculated amount is the final tax payable.
 - Never invent missing gross income, withholding, or RMB exchange rates.
@@ -291,10 +286,10 @@ Add tests with small fixture data:
 
 ## Open Questions Before Coding
 
-Resolve these before implementation:
+Resolved Phase 1 decisions:
 
-1. Use only IBKR Flex data in Phase 1, or support manual 1042-S CSV import immediately?
-2. Which RMB exchange-rate source should be accepted: user-supplied CSV, SAFE/PBOC manual rates, or IBKR FX evidence?
-3. Include realized capital gains in Phase 1, or keep Phase 1 to dividends/withholding only?
-4. Which output formats are required: Markdown only, CSV, HTML, or all three?
-5. Should calculation group by source country only, or also by IBKR tax lot/security for audit traceability?
+1. Use IBKR Flex data as the primary calculation source; 1042-S is optional follow-up reconciliation/evidence check, not required input.
+2. Use same-tax-year IBKR USD/RMB FX trade evidence first when available; require explicit documented rates when unavailable or when the user chooses another method.
+3. Keep Phase 1 to dividends/withholding only; realized capital gains stay Phase 2.
+4. Required output formats are Markdown plus CSV evidence tables.
+5. Group Phase 1 calculations by source country/category while preserving source-record evidence rows for audit traceability.

@@ -41,7 +41,7 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx,pnl
 ### `--analyzers` sections
 
 Use `--analyzers` to run only the sections you care about.
-**Default (when flag is omitted): all seven sections are enabled.** Specify a subset to focus the report and skip unneeded work.
+**Default (when flag is omitted): all seven standalone CLI sections are enabled.** Specify a subset to focus the report and skip unneeded work.
 
 | Section | What it covers |
 |---------|----------------|
@@ -74,25 +74,25 @@ uv run ibkr_analyzer.py --mode flex --analyzers trade,pnl,portfolio,cost,fx,dilu
 
 ## XML Data Cache
 
-When running in `--mode flex`, the script automatically manages a local XML cache in the plugin's data directory (`$CLAUDE_PLUGIN_ROOT/data/`).
+When running in `--mode flex`, the MCP server manages a local XML cache in the host-provided plugin data cache directory (`$CLAUDE_PLUGIN_DATA/cache/`, `$PLUGIN_DATA/cache/`, or local `cache/` during development).
 
 **Auto-save:** After a successful Flex API fetch, the raw XML is saved as:
 ```
 {account_id}-flex-ibkr-YYYY-MM-DD.xml
 ```
 
-**Auto-load:** On subsequent runs the same day, if a matching file already exists in the data dir, the script loads it instead of hitting the API — no wait, no rate-limit risk.
+**Auto-load:** On subsequent runs the same day, if a matching file already exists in the cache directory, the server loads it instead of hitting the API — no wait, no rate-limit risk.
 
 The cache is per-day. A new fetch happens automatically on the first run of each day.
 
 ```
-data/
+cache/
 └── U1234567-flex-ibkr-2026-05-02.xml   ← created on first run of the day
 ```
 
-To force a fresh API fetch (e.g. after new trades), delete the today's file:
+To force a fresh API fetch during local development, delete today's cached file:
 ```bash
-rm "$CLAUDE_PLUGIN_ROOT/data/*-flex-ibkr-$(date +%Y-%m-%d).xml"
+rm "${CLAUDE_PLUGIN_DATA:-$CLAUDE_PLUGIN_ROOT/cache}"/*-flex-ibkr-$(date +%Y-%m-%d).xml
 ```
 
 ## Module Overview
@@ -226,8 +226,8 @@ Configure credentials (prompted automatically at install time):
 # Debug: dump raw XML to inspect what IBKR returned
 uv run ibkr_analyzer.py --mode flex --dump-xml debug.xml --output reports/
 
-# Force fresh fetch today (delete cached XML first)
-rm "$CLAUDE_PLUGIN_ROOT/data/"*-flex-ibkr-$(date +%Y-%m-%d).xml
+# Force fresh fetch today during local development (delete cached XML first)
+rm "${CLAUDE_PLUGIN_DATA:-$CLAUDE_PLUGIN_ROOT/cache}"/*-flex-ibkr-$(date +%Y-%m-%d).xml
 uv run ibkr_analyzer.py --mode flex --output reports/
 
 # Analyse only stocks, skip expensive price fetch

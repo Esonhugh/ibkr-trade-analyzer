@@ -35,4 +35,4 @@ Return Markdown with these sections:
 
 - Ask a clarifying question only if the user's requested section cannot be inferred.
 - Do not run all sections when one section is enough.
-- Do not treat `price` as available through `ibkr_analyze`; the MCP analyzer sections are `trade`, `pnl`, `portfolio`, `cost`, `fx`, and `diluted_cost`.
+- Do not treat `price` as available through `ibkr_analyze`; the MCP analyzer sections are `trade`, `pnl`, `portfolio`, `cost`, `fx`, `diluted_cost`, and `china_tax`.

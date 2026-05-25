@@ -8,19 +8,28 @@ from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 
-import requests
-
 from models import AccountData, CashBalance, CashTransaction, OpenPosition, Trade
 
 
 class DataLoader:
     """Load IBKR data from Flex Web Service or local files."""
 
+    requests = None
+
     FLEX_SEND_URL = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest"
     FLEX_GET_URL = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.GetStatement"
 
     @staticmethod
-    def _get_session(proxy: str | None = None) -> requests.Session:
+    def _get_requests_module():
+        if DataLoader.requests is None:
+            import requests
+
+            DataLoader.requests = requests
+        return DataLoader.requests
+
+    @staticmethod
+    def _get_session(proxy: str | None = None):
+        requests = DataLoader._get_requests_module()
         session = requests.Session()
         if proxy:
             session.proxies = {"http": proxy, "https": proxy}

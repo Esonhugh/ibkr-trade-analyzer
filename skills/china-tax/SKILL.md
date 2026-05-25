@@ -34,7 +34,7 @@ Handle these tasks as research, design, evidence preparation, and manual estimat
 4. Produce year-end planning reviews that identify evidence gaps, possible withholding-rate issues, tax-lot/cost-basis issues, currency assumptions, and timing considerations.
 5. Produce implementation plans for deterministic code and tests.
 
-The automated `ibkr_china_tax_annual_calc` MCP tool supports Phase 1 IBKR Flex U.S. dividend/withholding estimates using same-tax-year IBKR USD/RMB FX trade evidence. 1042-S reconciliation, activity-statement reconciliation beyond loaded Flex cash transactions, realized gains, options, derivatives, cost basis, and non-USD dividends remain manual/review-required.
+The automated `ibkr_china_tax_annual_calc` MCP tool uses IBKR Flex as the primary Phase 1 source for U.S. dividend/withholding estimates and same-tax-year IBKR USD/RMB FX trade evidence when available. 1042-S is optional follow-up reconciliation/evidence check, not required input. Activity-statement reconciliation beyond loaded Flex cash transactions, realized gains, options, derivatives, cost basis, and non-USD dividends remain manual/review-required. Use `scripts/china_tax_self_check.py` for deterministic local-file self-check reports. Do not claim it produces final tax filing advice; it produces evidence tables, informational estimates, and review checklists.
 
 ## Annual Filing Calculation Workflow
 
@@ -42,8 +42,8 @@ Use this workflow for annual reporting / 年度报税工具 requests:
 
 1. Clarify tax year, residency assumption, brokerage source, and available documents.
 2. Load IBKR data when available with `ibkr_fetch_data`; call `ibkr_china_tax_annual_calc` for Phase 1 dividend, withholding, RMB conversion, and foreign-tax-credit estimates.
-3. Mark 1042-S reconciliation as a manual review item when official tax-form reconciliation is required.
-4. Require same-tax-year IBKR USD/RMB FX trade evidence before producing automated RMB amounts; do not present it as an official SAFE/PBOC/state-tax exchange-rate determination.
+3. Treat 1042-S as optional follow-up reconciliation/evidence check when official tax-form reconciliation is required.
+4. Use same-tax-year IBKR USD/RMB FX trade evidence before producing automated RMB amounts when available; otherwise require explicit documented rates. Do not present either method as an official SAFE/PBOC/state-tax exchange-rate determination.
 5. Compute only categories with explicit data and assumptions.
 6. Return evidence summary, China IIT estimate, treaty sanity check, missing inputs, and filing support checklist.
 
@@ -94,3 +94,4 @@ When asked to implement commands or calculators, follow test-first development:
 ## Additional Resources
 
 - `references/official-tax-rules-and-implementation-plan.md` — official-source rule summary, formulas, web-app pattern review, output tables, and staged implementation plan.
+- `scripts/china_tax_self_check.py` — deterministic local-file report generator for Flex XML/CSV, 1042-S CSV, RMB FX CSV, and IBKR tax-report ZIP evidence.

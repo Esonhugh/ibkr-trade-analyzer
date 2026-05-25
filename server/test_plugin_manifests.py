@@ -6,6 +6,8 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN_IBKR_MCP_TOOLS = {
@@ -44,6 +46,8 @@ def test_claude_marketplace_manifest() -> None:
 
 
 def test_codex_plugin_manifest() -> None:
+    if not (ROOT / ".codex-plugin/plugin.json").exists():
+        pytest.skip("Optional Codex packaging is not present in this checkout: .codex-plugin/plugin.json")
     manifest = load_json(".codex-plugin/plugin.json")
 
     assert manifest["name"] == "ibkr-trade-analyzer"
@@ -97,6 +101,8 @@ def test_command_docs_exist() -> None:
 
 
 def test_codex_marketplace_manifest() -> None:
+    if not (ROOT / ".agents/plugins/marketplace.json").exists():
+        pytest.skip("Optional Codex packaging is not present in this checkout: .agents/plugins/marketplace.json")
     marketplace = load_json(".agents/plugins/marketplace.json")
     plugin = marketplace["plugins"][0]
 
@@ -111,6 +117,8 @@ def test_codex_marketplace_manifest() -> None:
 
 
 def test_codex_mcp_config() -> None:
+    if not (ROOT / ".codex-mcp.json").exists():
+        pytest.skip("Optional Codex packaging is not present in this checkout: .codex-mcp.json")
     config = load_json(".codex-mcp.json")
     server = config["mcp_servers"]["ibkr-analyzer"]
 

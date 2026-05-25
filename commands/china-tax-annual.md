@@ -28,6 +28,22 @@ Generate a China resident annual overseas investment tax evidence review and inf
    - Missing Inputs / Review Required
    - Filing Support Checklist
 
+## Script Usage
+
+When the user provides local files, prefer the deterministic script in `skills/china-tax/scripts/china_tax_self_check.py`:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/china-tax/scripts/china_tax_self_check.py" \
+  --tax-year 2025 \
+  --flex-file "/path/to/flex.xml" \
+  --form-1042s "/path/to/1042s.csv" \
+  --fx-rates "/path/to/fx-rates.csv" \
+  --tax-report-zip "/path/to/2025 税务报告.zip" \
+  --output "reports/china-tax-self-check-2025.md"
+```
+
+Quote all paths because tax report paths may contain spaces.
+
 ## Guardrails
 
 - State that the output is an informational estimate and evidence organizer, not tax filing advice.

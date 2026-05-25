@@ -30,6 +30,22 @@ Generate a year-end tax planning review for China resident overseas brokerage ac
    - Year-end scenario modeling items
 6. Phrase every planning item as a neutral review point, not a buy/sell or filing directive.
 
+## Script Usage
+
+When the user provides local evidence files, use planning mode in `skills/china-tax/scripts/china_tax_self_check.py`:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/china-tax/scripts/china_tax_self_check.py" \
+  --tax-year 2025 \
+  --flex-file "/path/to/flex.xml" \
+  --fx-rates "/path/to/fx-rates.csv" \
+  --tax-report-zip "/path/to/2025 税务报告.zip" \
+  --planning \
+  --output "reports/china-tax-year-end-plan-2025.md"
+```
+
+Quote all paths because tax report paths may contain spaces.
+
 ## Output Format
 
 Return Markdown with these sections:

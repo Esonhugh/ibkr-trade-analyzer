@@ -26,7 +26,7 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 - **Workflow commands** — adds account summary, portfolio, cash/FX, report generation, and targeted analysis command workflows.
 - **Improved skill routing** — maps natural-language IBKR requests to focused read-only MCP workflows.
 - **Stronger command validation** — packaging tests now verify command frontmatter and allowed MCP tool references.
-- **Updated default prompts** — Codex prompts now highlight summary, portfolio, and cash/FX reviews.
+- **Optional Codex packaging** — Codex manifest, marketplace, and MCP files are optional packaging surfaces and may be absent in this checkout.
 
 ### v1.2.0
 
@@ -60,6 +60,8 @@ claude plugin install ibkr-trade-analyzer
 ```
 
 ### Method 2: Codex Local Marketplace
+
+Codex packaging is optional and is not present in every checkout. This checkout omits `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, and `.codex-mcp.json`; use this method only from a distribution that includes those files.
 
 From this plugin root, add the repo as a Codex marketplace source:
 
@@ -140,7 +142,7 @@ uv run ibkr_analyzer.py --mode file --source activity.xml --analyzers fx --no-pr
 uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 ```
 
-Available sections: `trade`, `pnl`, `portfolio`, `cost`, `price`, `fx`, `diluted_cost` (default: all).
+Available `--analyzers` sections: `trade`, `pnl`, `portfolio`, `cost`, `price`, `fx`, `diluted_cost` (standalone CLI) and `china_tax` (MCP `ibkr_analyze`).
 
 ## Data Source Options
 

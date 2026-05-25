@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from analyzers.diluted_cost import DilutedCostAnalyzer
 from models import AccountData, CashTransaction, Trade
 
 
@@ -15,6 +16,10 @@ class ChinaTaxConfig:
     tax_year: int
     resident_country: str = "CN"
     china_iit_dividend_rate: float = 0.20
+    china_iit_property_transfer_rate: float = 0.20
+    include_realized_pnl: bool = False
+    realized_pnl_asset_types: tuple[str, ...] = ("STK",)
+    realized_pnl_primary_method: str = "ibkr"
     fx_mode: str = "ibkr_evidence"
     dividend_country: str = "US"
 
@@ -66,7 +71,7 @@ class ChinaTaxAnalyzer:
         treaty_rows = [self._treaty_row(group) for group in grouped.values() if group["country"] == "US"]
         markdown = self.build_markdown(evidence_rows, estimates, treaty_rows)
 
-        return {
+        result = {
             "tax_year": self.config.tax_year,
             "status": "informational_estimate",
             "disclaimer": "Informational estimate and evidence organizer only; not tax filing advice.",
@@ -80,6 +85,187 @@ class ChinaTaxAnalyzer:
                 "china_iit_estimate": estimates,
                 "treaty_sanity_check": treaty_rows,
             },
+        }
+        if self.config.include_realized_pnl:
+            phase2 = self._realized_pnl_summary(fx_rates)
+            result["markdown"] = self.append_realized_pnl_markdown(
+                result["markdown"],
+                phase2["property_transfer_income_estimate"],
+                phase2["realized_pnl_comparison"],
+                phase2["review_required"],
+            )
+            result.update(phase2)
+            result["csv_rows"].update({
+                "property_transfer_income_estimate": phase2["property_transfer_income_estimate"],
+                "realized_pnl_comparison": phase2["realized_pnl_comparison"],
+                "review_required": phase2["review_required"],
+            })
+        return result
+
+    def _fifo_realized_by_symbol(self, trades: list[Trade]) -> dict[str, dict[str, Any]]:
+        by_symbol: dict[str, list[Trade]] = {}
+        for trade in trades:
+            by_symbol.setdefault(trade.symbol, []).append(trade)
+
+        results: dict[str, dict[str, Any]] = {}
+        for symbol, symbol_trades in by_symbol.items():
+            lots: list[dict[str, float]] = []
+            realized = 0.0
+            status = "complete"
+            currency = symbol_trades[0].currency if symbol_trades else ""
+            for trade in sorted(symbol_trades, key=lambda t: t.date_time):
+                qty = abs(trade.quantity)
+                multiplier = trade.multiplier or 1.0
+                commission = abs(trade.commission)
+                if trade.buy_sell in ("BUY", "BOT"):
+                    lots.append({
+                        "quantity": qty,
+                        "unit_cost": trade.trade_price * multiplier,
+                        "commission_remaining": commission,
+                    })
+                elif trade.buy_sell in ("SELL", "SLD"):
+                    remaining = qty
+                    matched_cost = 0.0
+                    matched_buy_commission = 0.0
+                    while remaining > 1e-9 and lots:
+                        lot = lots[0]
+                        matched_qty = min(remaining, lot["quantity"])
+                        ratio = matched_qty / lot["quantity"] if lot["quantity"] else 0
+                        matched_cost += matched_qty * lot["unit_cost"]
+                        matched_buy_commission += lot["commission_remaining"] * ratio
+                        lot["quantity"] -= matched_qty
+                        lot["commission_remaining"] -= lot["commission_remaining"] * ratio
+                        remaining -= matched_qty
+                        if lot["quantity"] <= 1e-9:
+                            lots.pop(0)
+                    if remaining > 1e-9:
+                        status = "incomplete"
+                    sell_proceeds = abs(trade.proceeds) if trade.proceeds else qty * trade.trade_price * multiplier
+                    realized += sell_proceeds - matched_cost - matched_buy_commission - commission
+            results[symbol] = {
+                "symbol": symbol,
+                "currency": currency,
+                "fifo_realized_pnl": self._round_money(realized),
+                "fifo_status": status,
+            }
+        return results
+
+    def _realized_pnl_summary(self, fx_rates: dict[str, float]) -> dict[str, Any]:
+        review_required = []
+        for trade in self.data.trades:
+            if not trade.date_time or trade.date_time.year != self.config.tax_year:
+                continue
+            if trade.asset_category == "CASH" or trade.realized_pnl == 0:
+                continue
+            if trade.asset_category != "STK":
+                review_required.append({
+                    "area": "realized_pnl",
+                    "reason": "non_stock_realized_pnl",
+                    "asset_category": trade.asset_category,
+                    "symbol": trade.symbol,
+                    "currency": trade.currency,
+                    "amount": self._round_money(trade.realized_pnl),
+                })
+
+        stock_trades = [
+            trade for trade in self.data.trades
+            if trade.date_time
+            and trade.date_time.year == self.config.tax_year
+            and trade.asset_category in self.config.realized_pnl_asset_types
+            and trade.asset_category == "STK"
+        ]
+        fifo_by_symbol = self._fifo_realized_by_symbol(stock_trades)
+        diluted_analyzer = DilutedCostAnalyzer(stock_trades)
+        diluted_by_symbol = {
+            symbol: ledger.realized_pnl
+            for symbol, ledger in diluted_analyzer._ledgers.items()
+        }
+        ibkr_by_symbol: dict[str, dict[str, Any]] = {}
+        for trade in stock_trades:
+            entry = ibkr_by_symbol.setdefault(trade.symbol, {
+                "symbol": trade.symbol,
+                "currency": trade.currency,
+                "ibkr_realized_pnl": 0.0,
+            })
+            entry["ibkr_realized_pnl"] += trade.realized_pnl
+
+        comparison = []
+        for symbol, ibkr_entry in sorted(ibkr_by_symbol.items()):
+            fifo_entry = fifo_by_symbol.get(symbol, {"fifo_realized_pnl": 0.0, "fifo_status": "incomplete"})
+            ibkr_pnl = self._round_money(ibkr_entry["ibkr_realized_pnl"])
+            fifo_pnl = self._round_money(fifo_entry["fifo_realized_pnl"])
+            diluted_pnl = self._round_money(diluted_by_symbol.get(symbol, 0.0))
+            comparison.append({
+                "symbol": symbol,
+                "currency": ibkr_entry["currency"],
+                "ibkr_realized_pnl": ibkr_pnl,
+                "fifo_realized_pnl": fifo_pnl,
+                "fifo_status": fifo_entry["fifo_status"],
+                "diluted_realized_pnl": diluted_pnl,
+                "difference_ibkr_vs_fifo": self._round_money(ibkr_pnl - fifo_pnl),
+                "difference_ibkr_vs_diluted": self._round_money(ibkr_pnl - diluted_pnl),
+                "notes": "FIFO comparison rebuilt from available Flex trades",
+            })
+            if fifo_entry["fifo_status"] == "incomplete":
+                review_required.append({
+                    "area": "realized_pnl",
+                    "reason": "fifo_lot_history_incomplete",
+                    "symbol": symbol,
+                    "currency": ibkr_entry["currency"],
+                    "notes": "Available Flex trades do not fully reconstruct FIFO lots for this symbol.",
+                })
+
+        by_currency: dict[str, float] = {}
+        for trade in stock_trades:
+            if trade.realized_pnl == 0:
+                continue
+            by_currency[trade.currency] = by_currency.get(trade.currency, 0.0) + trade.realized_pnl
+
+        estimates = []
+        for currency, pnl in sorted(by_currency.items()):
+            if currency != "USD":
+                review_required.append({
+                    "area": "realized_pnl",
+                    "reason": "non_usd_stock_realized_pnl",
+                    "currency": currency,
+                    "amount": self._round_money(pnl),
+                })
+                continue
+            rate = fx_rates.get(currency)
+            if rate is None:
+                review_required.append({
+                    "area": "realized_pnl",
+                    "reason": "missing_rmb_fx_evidence",
+                    "currency": currency,
+                    "amount": self._round_money(pnl),
+                })
+                continue
+            income_rmb = self._round_money(max(pnl * rate, 0))
+            tax = self._round_money(income_rmb * self.config.china_iit_property_transfer_rate)
+            estimates.append({
+                "country": "US",
+                "category": "property_transfer_income_candidate",
+                "currency": currency,
+                "ibkr_realized_pnl_original": self._round_money(pnl),
+                "income_rmb": income_rmb,
+                "china_rate": self.config.china_iit_property_transfer_rate,
+                "china_tax_before_credit": tax,
+                "foreign_tax_paid_rmb": 0,
+                "estimated_tax_rmb": tax,
+                "notes": "IBKR realized P&L primary evidence口径; informational estimate only",
+            })
+            if pnl < 0:
+                review_required.append({
+                    "area": "realized_pnl",
+                    "reason": "realized_loss_treatment_requires_review",
+                    "currency": currency,
+                    "amount": self._round_money(pnl),
+                    "notes": "Losses are preserved for review and not automatically offset against dividends or other income.",
+                })
+        return {
+            "property_transfer_income_estimate": estimates,
+            "realized_pnl_comparison": comparison,
+            "review_required": review_required,
         }
 
     def collect_dividend_items(self) -> list[dict[str, Any]]:
@@ -176,6 +362,45 @@ class ChinaTaxAnalyzer:
             lines.append(
                 f"| {row['country']} | {row['income_type']} | {row['gross']:.2f} | {row['withheld']:.2f} | "
                 f"{row['actual_rate']:.2%} | {row['treaty_reference']} | {row['review_note']} |"
+            )
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def append_realized_pnl_markdown(
+        markdown: str,
+        estimates: list[dict[str, Any]],
+        comparison: list[dict[str, Any]],
+        review_required: list[dict[str, Any]],
+    ) -> str:
+        lines = [markdown.rstrip(), "", "## Property Transfer Income Estimate", ""]
+        lines += [
+            "| Country | Category | Currency | IBKR Realized P&L | Income RMB | China Rate | Estimated Tax RMB | Notes |",
+            "|---|---|---|---:|---:|---:|---:|---|",
+        ]
+        for row in estimates:
+            lines.append(
+                f"| {row['country']} | {row['category']} | {row['currency']} | "
+                f"{row['ibkr_realized_pnl_original']:.2f} | {row['income_rmb']:.2f} | "
+                f"{row['china_rate']:.2%} | {row['estimated_tax_rmb']:.2f} | {row['notes']} |"
+            )
+        lines += ["", "## Realized P&L Comparison", ""]
+        lines += [
+            "| Symbol | Currency | IBKR P&L | FIFO P&L | FIFO Status | Diluted P&L | IBKR-FIFO | IBKR-Diluted | Notes |",
+            "|---|---|---:|---:|---|---:|---:|---:|---|",
+        ]
+        for row in comparison:
+            lines.append(
+                f"| {row['symbol']} | {row['currency']} | {row['ibkr_realized_pnl']:.2f} | "
+                f"{row['fifo_realized_pnl']:.2f} | {row['fifo_status']} | "
+                f"{row['diluted_realized_pnl']:.2f} | {row['difference_ibkr_vs_fifo']:.2f} | "
+                f"{row['difference_ibkr_vs_diluted']:.2f} | {row['notes']} |"
+            )
+        lines += ["", "## Review Required", ""]
+        lines += ["| Area | Reason | Symbol | Currency | Amount | Notes |", "|---|---|---|---|---:|---|"]
+        for row in review_required:
+            lines.append(
+                f"| {row.get('area', '')} | {row.get('reason', '')} | {row.get('symbol', '')} | "
+                f"{row.get('currency', '')} | {row.get('amount', 0):.2f} | {row.get('notes', '')} |"
             )
         return "\n".join(lines) + "\n"
 
