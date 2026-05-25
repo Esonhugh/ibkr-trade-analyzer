@@ -42,9 +42,10 @@ Data is cached in the MCP server session. Do not reload unless the user asks for
 | P&L performance | realized P&L, Sharpe, drawdown, monthly returns, 盈亏 | `ibkr_pnl_summary` |
 | Trading behavior | win rate, frequency, holding period, profit factor, 交易习惯 | `ibkr_trade_patterns` |
 | Costs and fees | commissions, interest, dividends, fee drag, 手续费 | `ibkr_cost_analysis` |
+| China tax evidence | 中国个税, 境外所得, 外税抵免, 1042-S, 年度报税 | `ibkr_china_tax_annual_calc`; use `china-tax` skill for official-source workflow |
 | Cost basis | breakeven, 保本价, 摊薄成本, FIFO, LIFO | `ibkr_analyze(sections=["diluted_cost"])` |
 | Full report | generate report, export HTML, 导出报告 | `ibkr_generate_report`; use `/ibkr-trade-analyzer:report` when available |
-| Filtered advanced analysis | date range, asset type, STK/OPT only | `ibkr_analyze(sections=[...], period="YYYY-MM-DD:YYYY-MM-DD", asset_types="STK,OPT")` |
+| Filtered advanced analysis | date range, asset type, STK/OPT only | `ibkr_analyze(sections=[...], period="YYYY-MM-DD:YYYY-MM-DD", asset_types="STK,OPT")`; `china_tax` is opt-in only |
 
 Ask one clarifying question only when the data source or intended section cannot be inferred.
 
@@ -59,6 +60,7 @@ Ask one clarifying question only when the data source or intended section cannot
 | `ibkr_trade_patterns` | Trading behavior: win rate, frequency, holding periods, profit factor. |
 | `ibkr_fx_analysis` | FX conversion history, average rates, ranges, FX commissions. |
 | `ibkr_cost_analysis` | Commissions, interest, dividends, and fee-to-P&L ratio. |
+| `ibkr_china_tax_annual_calc` | Informational China resident annual dividend/withholding estimate from IBKR Flex data and IBKR FX evidence. |
 | `ibkr_generate_report` | Generate Markdown and HTML report files. |
 
 ## Output Templates

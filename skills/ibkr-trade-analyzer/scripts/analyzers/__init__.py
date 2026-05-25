@@ -11,6 +11,7 @@ Each analyzer lives in its own module:
   analyzers/lifo.py           — LifoAnalyzer (LIFO lot matching)
 """
 
+from .china_tax import ChinaTaxAnalyzer, ChinaTaxConfig, MissingFxRateError
 from .cost import CostAnalyzer
 from .diluted_cost import DilutedCostAnalyzer
 from .fx import FxAnalyzer
@@ -21,10 +22,13 @@ from .price import PriceAnalyzer
 from .trade import TradeAnalyzer
 
 __all__ = [
+    "ChinaTaxAnalyzer",
+    "ChinaTaxConfig",
     "CostAnalyzer",
     "DilutedCostAnalyzer",
     "FxAnalyzer",
     "LifoAnalyzer",
+    "MissingFxRateError",
     "PnLAnalyzer",
     "PortfolioAnalyzer",
     "PriceAnalyzer",

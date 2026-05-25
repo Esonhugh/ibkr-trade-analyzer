@@ -18,6 +18,7 @@ Imports existing analyzer modules from the scripts/ directory.
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import sys
@@ -49,6 +50,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from analyzers import (
+    ChinaTaxAnalyzer,
+    ChinaTaxConfig,
     CostAnalyzer,
     DilutedCostAnalyzer,
     FxAnalyzer,
@@ -238,7 +241,7 @@ async def list_tools() -> list[Tool]:
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "enum": ["trade", "pnl", "portfolio", "cost", "fx", "diluted_cost"],
+                            "enum": ["trade", "pnl", "portfolio", "cost", "fx", "diluted_cost", "china_tax"],
                         },
                         "description": "Which analysis sections to run. Default: all.",
                     },
@@ -249,6 +252,15 @@ async def list_tools() -> list[Tool]:
                     "asset_types": {
                         "type": "string",
                         "description": "Filter by asset types, e.g. 'STK,OPT'",
+                    },
+                    "tax_year": {
+                        "type": "integer",
+                        "description": "Annual calculation year for china_tax section",
+                    },
+                    "china_iit_dividend_rate": {
+                        "type": "number",
+                        "description": "China IIT estimate rate for china_tax section. Default: 0.20",
+                        "default": 0.20,
                     },
                 },
             },
@@ -292,6 +304,32 @@ async def list_tools() -> list[Tool]:
                 "interest income/expense, dividend income, fee-to-PnL ratio."
             ),
             inputSchema={"type": "object", "properties": {}},
+        ),
+        Tool(
+            name="ibkr_china_tax_annual_calc",
+            description=(
+                "Prepare an informational China resident annual overseas investment tax estimate "
+                "from loaded IBKR Flex dividends, withholding tax, and IBKR FX evidence."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tax_year": {
+                        "type": "integer",
+                        "description": "Annual calculation year",
+                    },
+                    "china_iit_dividend_rate": {
+                        "type": "number",
+                        "description": "China IIT estimate rate for interest/dividends/bonus income. Default: 0.20",
+                        "default": 0.20,
+                    },
+                    "output_csv": {
+                        "type": "string",
+                        "description": "Optional directory for CSV evidence tables",
+                    },
+                },
+                "required": ["tax_year"],
+            },
         ),
         Tool(
             name="ibkr_generate_report",
@@ -376,6 +414,8 @@ async def _handle_tool(name: str, args: dict[str, Any]) -> str:
         return _handle_fx(data)
     elif name == "ibkr_cost_analysis":
         return _handle_cost(data)
+    elif name == "ibkr_china_tax_annual_calc":
+        return _handle_china_tax(data, args)
     elif name == "ibkr_generate_report":
         return _handle_report(data, args)
     else:
@@ -449,6 +489,9 @@ async def _handle_analyze(data: AccountData, args: dict[str, Any]) -> str:
         results["diluted_cost"] = dca.summary()
         results["lifo"] = lifo.summary()
 
+    if "china_tax" in sections:
+        results["china_tax"] = _china_tax_summary(filtered, args)
+
     return _serialize(results)
 
 
@@ -490,6 +533,43 @@ def _handle_cost(data: AccountData) -> str:
     """Cost analysis."""
     ca = CostAnalyzer(data.trades, data.cash_transactions)
     return _serialize(ca.summary())
+
+
+def _china_tax_summary(data: AccountData, args: dict[str, Any]) -> dict[str, Any]:
+    tax_year = args.get("tax_year")
+    if tax_year is None:
+        dated = [ct.date_time.year for ct in data.cash_transactions if ct.date_time]
+        if not dated:
+            raise RuntimeError("tax_year is required when loaded data has no dated cash transactions")
+        tax_year = max(dated)
+    config = ChinaTaxConfig(
+        tax_year=int(tax_year),
+        china_iit_dividend_rate=float(args.get("china_iit_dividend_rate", 0.20)),
+    )
+    return ChinaTaxAnalyzer(data, config).summary()
+
+
+def _handle_china_tax(data: AccountData, args: dict[str, Any]) -> str:
+    summary = _china_tax_summary(data, args)
+    output_csv = args.get("output_csv")
+    if output_csv:
+        summary["csv_files"] = _write_china_tax_csv_files(summary["csv_rows"], Path(output_csv))
+    return _serialize(summary)
+
+
+def _write_china_tax_csv_files(csv_rows: dict[str, list[dict[str, Any]]], output_dir: Path) -> dict[str, str]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    files = {}
+    for name, rows in csv_rows.items():
+        path = output_dir / f"china-tax-{name}.csv"
+        fieldnames = sorted({key for row in rows for key in row}) if rows else []
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            if fieldnames:
+                writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(rows)
+        files[name] = str(path)
+    return files
 
 
 def _handle_report(data: AccountData, args: dict[str, Any]) -> str:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Setup path same as the server does
@@ -14,7 +15,24 @@ sys.path.insert(0, str(_scripts_dir))
 
 import ibkr_mcp_server as srv
 
-TEST_XML = Path(_plugin_root) / "cache" / "flex-2026-05-16.xml"
+def _test_xml_path() -> Path:
+    today = datetime.now().strftime("%Y-%m-%d")
+    cache_dirs = [
+        Path.home() / ".claude" / "plugins" / "data" / "ibkr-trade-analyzer-Esonhugh-Marketplace" / "cache",
+        Path(_plugin_root) / "cache",
+    ]
+    for cache_dir in cache_dirs:
+        today_file = cache_dir / f"flex-{today}.xml"
+        if today_file.exists():
+            return today_file
+    for cache_dir in cache_dirs:
+        matches = sorted(cache_dir.glob("flex-*.xml"), key=lambda path: path.stat().st_mtime, reverse=True)
+        if matches:
+            return matches[0]
+    return cache_dirs[0] / f"flex-{today}.xml"
+
+
+TEST_XML = _test_xml_path()
 
 
 def run(coro):

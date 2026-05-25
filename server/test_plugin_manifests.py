@@ -16,6 +16,7 @@ KNOWN_IBKR_MCP_TOOLS = {
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_trade_patterns",
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_fx_analysis",
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_cost_analysis",
+    "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_china_tax_annual_calc",
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_generate_report",
 }
 
@@ -62,6 +63,8 @@ def test_command_docs_exist() -> None:
         "cash-fx.md",
         "report.md",
         "analyze.md",
+        "china-tax-annual.md",
+        "china-tax-year-end-plan.md",
     }
 
     assert commands_dir.is_dir()
