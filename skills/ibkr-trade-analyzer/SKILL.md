@@ -28,7 +28,7 @@ Before any analysis, ensure data is loaded:
 
 - Flex mode: call `ibkr_fetch_data(mode="flex")`.
 - Local file mode: call `ibkr_fetch_data(mode="file", source="/path/to/activity.xml")`.
-- If credentials are missing, tell Claude users to run `claude plugin configure ibkr-trade-analyzer`; tell Codex users to export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID` before starting Codex.
+- If credentials are missing, tell Claude users to run `claude plugin configure ibkr-trade-analyzer`.
 
 Data is cached in the MCP server session. Do not reload unless the user asks for `force_refresh` or changes the source file.
 
@@ -97,7 +97,7 @@ Use this format for currency questions:
 
 ## Troubleshooting
 
-- `Flex credentials not configured` — Claude: run `claude plugin configure ibkr-trade-analyzer`; Codex: export `IBKR_FLEX_TOKEN` and `IBKR_QUERY_ID` before starting Codex.
+- `Flex credentials not configured` — run `claude plugin configure ibkr-trade-analyzer`.
 - `Token expired` — reconfigure the plugin with a new Flex token.
 - Rate limit or cooldown — IBKR Flex can rate-limit repeated queries; use cached data or wait.
 - Empty data — confirm the Flex Query includes Trades, Cash Transactions, Open Positions, and Account Information.

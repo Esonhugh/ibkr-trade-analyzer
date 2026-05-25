@@ -1,13 +1,10 @@
-"""Plugin manifest checks for Claude Code and Codex packaging."""
+"""Plugin manifest checks for Claude Code packaging."""
 
 from __future__ import annotations
 
 import ast
 import json
 from pathlib import Path
-
-import pytest
-
 
 ROOT = Path(__file__).resolve().parent.parent
 KNOWN_IBKR_MCP_TOOLS = {
@@ -43,20 +40,6 @@ def test_claude_marketplace_manifest() -> None:
     assert marketplace["metadata"]["version"] == "2.1.0"
     assert marketplace["plugins"][0]["name"] == "ibkr-trade-analyzer"
     assert marketplace["plugins"][0]["source"] == "./"
-
-
-def test_codex_plugin_manifest() -> None:
-    if not (ROOT / ".codex-plugin/plugin.json").exists():
-        pytest.skip("Optional Codex packaging is not present in this checkout: .codex-plugin/plugin.json")
-    manifest = load_json(".codex-plugin/plugin.json")
-
-    assert manifest["name"] == "ibkr-trade-analyzer"
-    assert manifest["version"] == "2.1.0"
-    assert manifest["skills"] == "./skills/"
-    assert manifest["mcpServers"] == "./.codex-mcp.json"
-    assert manifest["interface"]["displayName"] == "IBKR Trade Analyzer"
-    assert len(manifest["interface"]["defaultPrompt"]) <= 3
-    assert all(len(prompt) <= 128 for prompt in manifest["interface"]["defaultPrompt"])
 
 
 def test_command_docs_exist() -> None:
@@ -98,33 +81,3 @@ def test_command_docs_exist() -> None:
             f"{command_name} has unknown allowed-tools: "
             f"{sorted(set(allowed_tools) - KNOWN_IBKR_MCP_TOOLS)}"
         )
-
-
-def test_codex_marketplace_manifest() -> None:
-    if not (ROOT / ".agents/plugins/marketplace.json").exists():
-        pytest.skip("Optional Codex packaging is not present in this checkout: .agents/plugins/marketplace.json")
-    marketplace = load_json(".agents/plugins/marketplace.json")
-    plugin = marketplace["plugins"][0]
-
-    assert marketplace["name"] == "esonhugh-ibkr-trade-analyzer"
-    assert plugin["name"] == "ibkr-trade-analyzer"
-    assert plugin["source"] == {"source": "local", "path": "./"}
-    assert plugin["policy"] == {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL",
-    }
-    assert plugin["category"] == "Finance"
-
-
-def test_codex_mcp_config() -> None:
-    if not (ROOT / ".codex-mcp.json").exists():
-        pytest.skip("Optional Codex packaging is not present in this checkout: .codex-mcp.json")
-    config = load_json(".codex-mcp.json")
-    server = config["mcp_servers"]["ibkr-analyzer"]
-
-    assert server["type"] == "stdio"
-    assert server["command"] == "bash"
-    assert "PLUGIN_ROOT" in server["args"][1]
-    assert "CODEX_PLUGIN_ROOT" in server["args"][1]
-    assert "CLAUDE_PLUGIN_ROOT" in server["args"][1]
-    assert "server/ibkr_mcp_server.py" in server["args"][1]

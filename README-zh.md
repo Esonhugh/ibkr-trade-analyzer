@@ -3,7 +3,7 @@
 [![版本](https://img.shields.io/badge/版本-2.0.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
-**一个用于分析 Interactive Brokers 交易历史的 Claude Code 与 Codex 插件 — 只读分析，零风险。**
+**一个用于分析 Interactive Brokers 交易历史的 Claude Code 插件 — 只读分析，零风险。**
 
 ## 功能介绍
 
@@ -24,8 +24,7 @@
 ### v2.0.0 新特性
 
 - **Claude Code 插件清单** — 当前 checkout 包含 Claude Code 插件清单 (`.claude-plugin/plugin.json`)
-- **可选 Codex packaging** — Codex 清单 (`.codex-plugin/plugin.json`)、marketplace 元数据 (`.agents/plugins/marketplace.json`) 和 Codex MCP 配置 (`.codex-mcp.json`) 属于可选 packaging surface，当前 checkout 未包含这些文件
-- **宿主 MCP 启动路径** — Claude 继续使用 `.mcp.json`；包含 Codex packaging 的分发包可通过 `.codex-mcp.json` 复用同一个 MCP 服务端
+- **宿主 MCP 启动路径** — Claude 使用 `.mcp.json` 启动同一个 MCP 服务端
 - **宿主感知缓存** — 优先使用插件宿主提供的数据目录，本地开发回退到 `cache/`
 
 ### v1.2.0
@@ -59,28 +58,7 @@ claude plugin marketplace add Esonhugh/Marketplace
 claude plugin install ibkr-trade-analyzer
 ```
 
-### 方式二：Codex 本地 Marketplace
-
-Codex packaging 是可选内容，并非每个 checkout 都包含。当前 checkout 未包含 `.codex-plugin/plugin.json`、`.agents/plugins/marketplace.json` 和 `.codex-mcp.json`；只有在使用包含这些文件的分发包时才使用此方式。
-
-在本插件根目录执行：
-
-```bash
-codex plugin marketplace add "$(pwd)"
-```
-
-然后打开 Codex，在 `/plugins` 中安装 `ibkr-trade-analyzer`。
-
-Codex 不读取 Claude `userConfig`，请在启动 Codex 的 shell 中设置凭证：
-
-```bash
-export IBKR_FLEX_TOKEN="your-token-here"
-export IBKR_QUERY_ID="123456"
-export PROXY=""  # 可选
-codex
-```
-
-### 方式三：从 GitHub 克隆
+### 方式二：从 GitHub 克隆
 
 克隆整个 marketplace 仓库，并指定插件目录：
 
@@ -100,7 +78,7 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 
 ## 使用方法
 
-安装后，直接对 Claude 或 Codex 说：
+安装后，直接对 Claude 说：
 
 ```
 分析我的 IBKR 交易历史
@@ -165,14 +143,6 @@ uv run ibkr_analyzer.py --mode flex --analyzers portfolio --no-prices
 
 Claude Code 会提示你输入 Flex Token（加密存入系统 keychain）和 Query ID。之后每次运行自动注入，无需任何文件管理。
 
-**Codex 或脚本配置** — Codex 启动内置 MCP 服务端时会继承环境变量：
-
-```bash
-export IBKR_FLEX_TOKEN="your-token-here"
-export IBKR_QUERY_ID="123456"
-export PROXY="socks5://127.0.0.1:7980"  # 可选
-```
-
 ### 方式 B：本地文件
 
 从 IBKR Client Portal 或 TWS 导出文件，提供文件路径即可。支持 CSV 和 XML 格式。
@@ -187,7 +157,7 @@ uv run ibkr_analyzer.py --mode file --source ~/Downloads/activity.xml --output r
 
 ## 配置
 
-Claude 凭证在安装时由 Claude Code 的内置插件设置系统提示输入；Codex 凭证从启动 Codex 进程的环境变量读取。Claude 安装命令：
+Claude 凭证在安装时由 Claude Code 的内置插件设置系统提示输入。安装命令：
 
 ```claude
 /plugin install ibkr-trade-analyzer

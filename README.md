@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-2.1.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**A Claude Code and Codex plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
+**A Claude Code plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
 
 ## What It Does
 
@@ -26,7 +26,6 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 - **Workflow commands** — adds account summary, portfolio, cash/FX, report generation, and targeted analysis command workflows.
 - **Improved skill routing** — maps natural-language IBKR requests to focused read-only MCP workflows.
 - **Stronger command validation** — packaging tests now verify command frontmatter and allowed MCP tool references.
-- **Optional Codex packaging** — Codex manifest, marketplace, and MCP files are optional packaging surfaces and may be absent in this checkout.
 
 ### v1.2.0
 
@@ -59,28 +58,7 @@ claude plugin marketplace add Esonhugh/Marketplace
 claude plugin install ibkr-trade-analyzer
 ```
 
-### Method 2: Codex Local Marketplace
-
-Codex packaging is optional and is not present in every checkout. This checkout omits `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, and `.codex-mcp.json`; use this method only from a distribution that includes those files.
-
-From this plugin root, add the repo as a Codex marketplace source:
-
-```bash
-codex plugin marketplace add "$(pwd)"
-```
-
-Then open Codex and install `ibkr-trade-analyzer` from `/plugins`.
-
-Codex does not use Claude `userConfig`; set credentials in the shell that starts Codex:
-
-```bash
-export IBKR_FLEX_TOKEN="your-token-here"
-export IBKR_QUERY_ID="123456"
-export PROXY=""  # optional
-codex
-```
-
-### Method 3: Clone from GitHub
+### Method 2: Clone from GitHub
 
 Clone the entire marketplace repo and point Claude Code to the plugin directory:
 
@@ -100,7 +78,7 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 
 ## Usage
 
-Once installed, simply tell Claude or Codex:
+Once installed, simply tell Claude:
 
 ```
 Analyze my IBKR trading history
@@ -167,17 +145,9 @@ Claude Code will prompt you for your Flex Token (stored securely in system keych
 and Query ID. Credentials are injected automatically on every future run — no files to
 manage, no `.gitignore` entries needed.
 
-**Codex or scripting configuration** — Codex inherits environment variables when launching the bundled MCP server:
-
-```bash
-export IBKR_FLEX_TOKEN="your-token-here"
-export IBKR_QUERY_ID="123456"
-export PROXY="socks5://127.0.0.1:7980"  # optional
-```
-
 ## Configuration
 
-Claude credentials are configured at install time via Claude Code's built-in settings system. Codex credentials are read from environment variables inherited by the Codex process.
+Claude credentials are configured at install time via Claude Code's built-in settings system.
 
 | Field | Sensitive | Description |
 |-------|-----------|-------------|

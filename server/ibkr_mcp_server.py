@@ -12,7 +12,7 @@
 """IBKR Trade Analyzer - stdio MCP server.
 
 Exposes structured tools for analyzing Interactive Brokers trading data.
-Reads credentials from environment variables injected by Claude Code or Codex.
+Reads credentials from environment variables injected by Claude Code.
 Imports existing analyzer modules from the scripts/ directory.
 """
 
@@ -70,7 +70,7 @@ _session_data: AccountData | None = None
 _data_source_info: str = ""
 
 # --- Credentials from env ---
-# Primary: injected by Claude .mcp.json ${user_config.*} expansion or inherited by Codex.
+# Primary: injected by Claude .mcp.json ${user_config.*} expansion.
 # Fallback: *_PLUGIN_OPTION_* names used by plugin host subprocess integrations.
 FLEX_TOKEN = (
     _first_env(
@@ -116,8 +116,7 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
         if not FLEX_TOKEN or not QUERY_ID:
             raise RuntimeError(
                 "Flex credentials not configured. "
-                "For Claude, run: claude plugin configure ibkr-trade-analyzer. "
-                "For Codex, export IBKR_FLEX_TOKEN and IBKR_QUERY_ID before starting Codex."
+                "Run: claude plugin configure ibkr-trade-analyzer."
             )
         # Check for today's cached XML in the host data cache.
         data_dir = _data_dir()
