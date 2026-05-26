@@ -4,16 +4,61 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
 
-# Setup path same as the server does
 _plugin_root = str(Path(__file__).resolve().parent.parent)
-_scripts_dir = Path(_plugin_root) / "skills" / "ibkr-trade-analyzer" / "scripts"
-sys.path.insert(0, str(_scripts_dir))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import ibkr_mcp_server as srv
+
+
+def test_mcp_server_does_not_use_codex_env_vars(monkeypatch):
+    monkeypatch.setenv("CODEX_PLUGIN_ROOT", "/tmp/codex-root-should-not-be-used")
+    monkeypatch.setenv("CODEX_PLUGIN_DATA", "/tmp/codex-data-should-not-be-used")
+    monkeypatch.delenv("PLUGIN_ROOT", raising=False)
+    monkeypatch.delenv("PLUGIN_DATA", raising=False)
+    monkeypatch.delenv("CLAUDE_PLUGIN_ROOT", raising=False)
+    monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
+
+    assert "CODEX_PLUGIN_ROOT" not in srv._ROOT_ENV_NAMES
+    assert "CODEX_PLUGIN_DATA" not in srv._DATA_ENV_NAMES
+
+
+def test_mcp_server_imports_shared_library_models():
+    assert srv.DataLoader.__module__ == "ibkr_analyzer_lib.loader"
+    assert srv.AccountData.__module__ == "ibkr_analyzer_lib.models"
+    assert srv.ChinaTaxAnalyzer.__module__ == "ibkr_analyzer_lib.analyzers.china_tax"
+
+
+def test_mcp_server_importable_when_only_server_dir_is_on_sys_path():
+    server_dir = Path(__file__).resolve().parent
+    project_root = server_dir.parent
+    snippet = f"""
+import sys
+from pathlib import Path
+server_dir = Path({str(server_dir)!r})
+project_root = Path({str(project_root)!r})
+sys.path = [str(server_dir)] + [
+    path for path in sys.path
+    if path and Path(path).resolve() != project_root
+]
+import ibkr_mcp_server as srv
+assert srv.DataLoader.__module__ == "ibkr_analyzer_lib.loader"
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", snippet],
+        cwd="/tmp",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
 
 def _test_xml_path() -> Path:
     today = datetime.now().strftime("%Y-%m-%d")

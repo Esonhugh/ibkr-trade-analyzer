@@ -7,12 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-ROOT = Path(__file__).resolve().parent.parent
-CHINA_TAX_SCRIPTS = ROOT / "skills" / "china-tax" / "scripts"
-sys.path.insert(0, str(CHINA_TAX_SCRIPTS))
-
-import china_tax_self_check
-from china_tax_self_check import (
+from ibkr_analyzer_lib import (
+    china_tax_self_check,
+)
+from ibkr_analyzer_lib.china_tax_self_check import (
     TaxEvidenceItem,
     build_markdown_report,
     calculate_iit_estimate,
@@ -21,6 +19,9 @@ from china_tax_self_check import (
     load_1042s_csv,
     load_fx_rates_csv,
 )
+
+ROOT = Path(__file__).resolve().parent.parent
+CHINA_TAX_SCRIPT = ROOT / "skills" / "china-tax" / "scripts" / "china_tax_self_check.py"
 
 
 def test_dividend_with_10_percent_us_withholding_has_topup() -> None:
@@ -464,7 +465,7 @@ def test_extract_flex_evidence_classifies_cash_transactions_by_description(monke
         ],
     )
     data_loader = SimpleNamespace(from_file=lambda path: account)
-    monkeypatch.setattr(china_tax_self_check, "_load_data_loader", lambda: data_loader)
+    monkeypatch.setattr(china_tax_self_check.DataLoader, "from_file", lambda path: account)
 
     result = extract_flex_evidence(Path("unused.xml"), tax_year=2026)
 
@@ -524,7 +525,7 @@ def test_extract_flex_evidence_exposes_cash_metrics_by_currency(monkeypatch) -> 
         ],
     )
     data_loader = SimpleNamespace(from_file=lambda path: account)
-    monkeypatch.setattr(china_tax_self_check, "_load_data_loader", lambda: data_loader)
+    monkeypatch.setattr(china_tax_self_check.DataLoader, "from_file", lambda path: account)
 
     result = extract_flex_evidence(Path("unused.xml"), tax_year=2026)
 
@@ -732,7 +733,7 @@ def test_cli_generates_report_with_tax_zip_path_containing_spaces(tmp_path: Path
     result = subprocess.run(
         [
             sys.executable,
-            str(CHINA_TAX_SCRIPTS / "china_tax_self_check.py"),
+            str(CHINA_TAX_SCRIPT),
             "--tax-year",
             "2025",
             "--tax-report-zip",
@@ -765,7 +766,7 @@ def test_cli_generates_report_with_1042s_dividend_and_no_fx_rates(tmp_path: Path
     result = subprocess.run(
         [
             sys.executable,
-            str(CHINA_TAX_SCRIPTS / "china_tax_self_check.py"),
+            str(CHINA_TAX_SCRIPT),
             "--tax-year",
             "2025",
             "--form-1042s",

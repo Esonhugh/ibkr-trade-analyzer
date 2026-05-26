@@ -7,12 +7,10 @@ from datetime import datetime
 from pathlib import Path
 
 _plugin_root = Path(__file__).resolve().parent.parent
-_scripts_dir = _plugin_root / "skills" / "ibkr-trade-analyzer" / "scripts"
-sys.path.insert(0, str(_scripts_dir))
 sys.path.insert(0, str(_plugin_root / "server"))
 
 import ibkr_mcp_server as srv
-from models import AccountData, CashTransaction, Trade
+from ibkr_analyzer_lib.models import AccountData, CashTransaction, Trade
 
 
 def run(coro):

@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
+import sys
+import types
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+IBKR_ANALYZER_SCRIPT = ROOT / "skills" / "ibkr-trade-analyzer" / "scripts" / "ibkr_analyzer.py"
 KNOWN_IBKR_MCP_TOOLS = {
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_fetch_data",
     "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_analyze",
@@ -22,6 +26,65 @@ KNOWN_IBKR_MCP_TOOLS = {
 
 def load_json(relative_path: str) -> dict:
     return json.loads((ROOT / relative_path).read_text())
+
+
+def load_ibkr_analyzer_module(monkeypatch):
+    analyzers_stub = types.ModuleType("ibkr_analyzer_lib.analyzers")
+    for name in (
+        "CostAnalyzer",
+        "DilutedCostAnalyzer",
+        "FxAnalyzer",
+        "LifoAnalyzer",
+        "PnLAnalyzer",
+        "PortfolioAnalyzer",
+        "PriceAnalyzer",
+        "TradeAnalyzer",
+    ):
+        setattr(analyzers_stub, name, type(name, (), {}))
+
+    loader_stub = types.ModuleType("ibkr_analyzer_lib.loader")
+    loader_stub.DataLoader = type("DataLoader", (), {})
+    report_stub = types.ModuleType("ibkr_analyzer_lib.report")
+    report_stub.ReportGenerator = type("ReportGenerator", (), {})
+
+    monkeypatch.setitem(sys.modules, "ibkr_analyzer_lib.analyzers", analyzers_stub)
+    monkeypatch.setitem(sys.modules, "ibkr_analyzer_lib.loader", loader_stub)
+    monkeypatch.setitem(sys.modules, "ibkr_analyzer_lib.report", report_stub)
+
+    spec = importlib.util.spec_from_file_location("ibkr_analyzer_cli", IBKR_ANALYZER_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, module)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_ibkr_analyzer_data_dir_prefers_plugin_data(monkeypatch) -> None:
+    monkeypatch.setenv("PLUGIN_DATA", "/tmp/data")
+    monkeypatch.setenv("CLAUDE_PLUGIN_DATA", "/tmp/claude-data")
+
+    module = load_ibkr_analyzer_module(monkeypatch)
+
+    assert module._data_dir() == Path("/tmp/data/cache")
+
+
+def test_ibkr_analyzer_data_dir_uses_claude_plugin_data(monkeypatch) -> None:
+    monkeypatch.delenv("PLUGIN_DATA", raising=False)
+    monkeypatch.setenv("CLAUDE_PLUGIN_DATA", "/tmp/claude-data")
+
+    module = load_ibkr_analyzer_module(monkeypatch)
+
+    assert module._data_dir() == Path("/tmp/claude-data/cache")
+
+
+def test_ibkr_analyzer_data_dir_falls_back_to_project_cache(monkeypatch) -> None:
+    monkeypatch.delenv("PLUGIN_DATA", raising=False)
+    monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
+
+    module = load_ibkr_analyzer_module(monkeypatch)
+
+    assert module._data_dir() == ROOT / "cache"
 
 
 def test_claude_plugin_manifest() -> None:

@@ -42,7 +42,7 @@ Expected after final task: all tests in both files pass.
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing tests for config defaults and Phase 1 compatibility**
+- [x] **Step 1: Write failing tests for config defaults and Phase 1 compatibility**
 
 Append this test to `server/test_china_tax_analyzer.py`:
 
@@ -63,7 +63,7 @@ def test_realized_pnl_config_defaults_to_stock_ibkr_primary_method():
     assert config.realized_pnl_primary_method == "ibkr"
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -73,7 +73,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL with `TypeError` for unexpected `include_realized_pnl` or `AttributeError` for missing config fields.
 
-- [ ] **Step 3: Extend `ChinaTaxConfig` minimally**
+- [x] **Step 3: Extend `ChinaTaxConfig` minimally**
 
 In `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`, change the dataclass to:
 
@@ -93,7 +93,7 @@ class ChinaTaxConfig:
 
 Do not add Phase 2 output yet.
 
-- [ ] **Step 4: Run tests and verify GREEN for config/default behavior**
+- [x] **Step 4: Run tests and verify GREEN for config/default behavior**
 
 Run:
 
@@ -118,7 +118,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Add test helper for Phase 2 stock data**
+- [x] **Step 1: Add test helper for Phase 2 stock data**
 
 Append this helper to `server/test_china_tax_analyzer.py` after `_sample_data()`:
 
@@ -157,7 +157,7 @@ def _sample_realized_gain_data(realized_pnl: float = 100.0, asset_category: str 
     return data
 ```
 
-- [ ] **Step 2: Write failing realized-gain tax estimate test**
+- [x] **Step 2: Write failing realized-gain tax estimate test**
 
 Append this test:
 
@@ -178,7 +178,7 @@ def test_realized_stock_gain_uses_ibkr_pnl_as_property_transfer_candidate():
     assert estimate["estimated_tax_rmb"] == 140
 ```
 
-- [ ] **Step 3: Run test and verify RED**
+- [x] **Step 3: Run test and verify RED**
 
 Run:
 
@@ -188,7 +188,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL with missing `property_transfer_income_estimate`.
 
-- [ ] **Step 4: Add minimal Phase 2 summary branch**
+- [x] **Step 4: Add minimal Phase 2 summary branch**
 
 In `ChinaTaxAnalyzer.summary()`, after Phase 1 fields are assembled, build the result in a local variable and append Phase 2 fields only when enabled:
 
@@ -221,7 +221,7 @@ In `ChinaTaxAnalyzer.summary()`, after Phase 1 fields are assembled, build the r
 
 Replace the existing direct `return { ... }` block with this structure.
 
-- [ ] **Step 5: Add minimal `_realized_pnl_summary()` implementation**
+- [x] **Step 5: Add minimal `_realized_pnl_summary()` implementation**
 
 Add this method inside `ChinaTaxAnalyzer` before `collect_dividend_items()`:
 
@@ -281,7 +281,7 @@ Add this method inside `ChinaTaxAnalyzer` before `collect_dividend_items()`:
         }
 ```
 
-- [ ] **Step 6: Run test and verify GREEN**
+- [x] **Step 6: Run test and verify GREEN**
 
 Run:
 
@@ -291,7 +291,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: PASS.
 
-- [ ] **Step 7: Run all analyzer tests**
+- [x] **Step 7: Run all analyzer tests**
 
 Run:
 
@@ -316,7 +316,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append these tests:
 
@@ -340,7 +340,7 @@ def test_non_stock_realized_pnl_is_review_required_not_auto_taxed():
     assert any(item["reason"] == "non_stock_realized_pnl" for item in result["review_required"])
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -350,7 +350,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL because review-required entries are missing.
 
-- [ ] **Step 3: Add loss and non-STK review collection**
+- [x] **Step 3: Add loss and non-STK review collection**
 
 At the start of `_realized_pnl_summary()`, add non-STK realized P&L review entries:
 
@@ -387,7 +387,7 @@ Inside the USD estimate branch, after creating the estimate for each currency, a
                 })
 ```
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run:
 
@@ -397,7 +397,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: both tests PASS.
 
-- [ ] **Step 5: Run all analyzer tests**
+- [x] **Step 5: Run all analyzer tests**
 
 Run:
 
@@ -422,7 +422,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing complete-FIFO comparison test**
+- [x] **Step 1: Write failing complete-FIFO comparison test**
 
 Append this test:
 
@@ -442,7 +442,7 @@ def test_realized_pnl_comparison_includes_complete_fifo_result():
 
 The expected FIFO P&L is `1000 proceeds - 900 cost - 1 buy commission - 1 sell commission = 98`.
 
-- [ ] **Step 2: Run test and verify RED**
+- [x] **Step 2: Run test and verify RED**
 
 Run:
 
@@ -452,7 +452,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL because `realized_pnl_comparison` is empty.
 
-- [ ] **Step 3: Add FIFO helper methods**
+- [x] **Step 3: Add FIFO helper methods**
 
 Add these methods inside `ChinaTaxAnalyzer`, before `_realized_pnl_summary()`:
 
@@ -506,7 +506,7 @@ Add these methods inside `ChinaTaxAnalyzer`, before `_realized_pnl_summary()`:
         return results
 ```
 
-- [ ] **Step 4: Add comparison rows to `_realized_pnl_summary()`**
+- [x] **Step 4: Add comparison rows to `_realized_pnl_summary()`**
 
 In `_realized_pnl_summary()`, after `stock_trades` is defined, add:
 
@@ -551,7 +551,7 @@ to:
             "realized_pnl_comparison": comparison,
 ```
 
-- [ ] **Step 5: Add FIFO incomplete review item**
+- [x] **Step 5: Add FIFO incomplete review item**
 
 After building each comparison row, add:
 
@@ -566,7 +566,7 @@ After building each comparison row, add:
                 })
 ```
 
-- [ ] **Step 6: Run test and verify GREEN**
+- [x] **Step 6: Run test and verify GREEN**
 
 Run:
 
@@ -576,7 +576,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: PASS.
 
-- [ ] **Step 7: Run all analyzer tests**
+- [x] **Step 7: Run all analyzer tests**
 
 Run:
 
@@ -601,7 +601,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing missing-lot test**
+- [x] **Step 1: Write failing missing-lot test**
 
 Append this test:
 
@@ -633,7 +633,7 @@ def test_missing_fifo_lot_marks_comparison_incomplete():
     assert any(item["reason"] == "fifo_lot_history_incomplete" for item in result["review_required"])
 ```
 
-- [ ] **Step 2: Run test and verify RED or GREEN**
+- [x] **Step 2: Run test and verify RED or GREEN**
 
 Run:
 
@@ -643,7 +643,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected before Task 4 implementation: FAIL. Expected after Task 4 implementation: PASS. If it passes, do not change production code.
 
-- [ ] **Step 3: If needed, add missing-lot review behavior**
+- [x] **Step 3: If needed, add missing-lot review behavior**
 
 Only if the test fails, ensure Task 4 Step 5 code exists in `_realized_pnl_summary()`:
 
@@ -658,7 +658,7 @@ Only if the test fails, ensure Task 4 Step 5 code exists in `_realized_pnl_summa
                 })
 ```
 
-- [ ] **Step 4: Run test and verify GREEN**
+- [x] **Step 4: Run test and verify GREEN**
 
 Run:
 
@@ -683,7 +683,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing diluted comparison test**
+- [x] **Step 1: Write failing diluted comparison test**
 
 Append this test:
 
@@ -697,7 +697,7 @@ def test_realized_pnl_comparison_includes_diluted_result():
     assert comparison["difference_ibkr_vs_diluted"] == 0
 ```
 
-- [ ] **Step 2: Run test and verify RED**
+- [x] **Step 2: Run test and verify RED**
 
 Run:
 
@@ -707,7 +707,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL because `diluted_realized_pnl` is still 0.
 
-- [ ] **Step 3: Import `DilutedCostAnalyzer`**
+- [x] **Step 3: Import `DilutedCostAnalyzer`**
 
 At the top of `china_tax.py`, below model imports, add:
 
@@ -721,7 +721,7 @@ If that import creates package import issues when tests run, use a local import 
 from analyzers.diluted_cost import DilutedCostAnalyzer
 ```
 
-- [ ] **Step 4: Add diluted lookup inside `_realized_pnl_summary()`**
+- [x] **Step 4: Add diluted lookup inside `_realized_pnl_summary()`**
 
 After `fifo_by_symbol = ...`, add:
 
@@ -753,7 +753,7 @@ and use:
                 "difference_ibkr_vs_diluted": self._round_money(ibkr_pnl - diluted_pnl),
 ```
 
-- [ ] **Step 5: Run test and verify GREEN**
+- [x] **Step 5: Run test and verify GREEN**
 
 Run:
 
@@ -763,7 +763,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: PASS.
 
-- [ ] **Step 6: Run all analyzer tests**
+- [x] **Step 6: Run all analyzer tests**
 
 Run:
 
@@ -788,7 +788,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_analyzer.py`
 - Modify: `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py`
 
-- [ ] **Step 1: Write failing output test**
+- [x] **Step 1: Write failing output test**
 
 Append this test:
 
@@ -804,7 +804,7 @@ def test_phase2_markdown_and_csv_include_realized_gain_sections():
     assert "review_required" in result["csv_rows"]
 ```
 
-- [ ] **Step 2: Run test and verify RED**
+- [x] **Step 2: Run test and verify RED**
 
 Run:
 
@@ -814,7 +814,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: FAIL because Markdown lacks Phase 2 section headings.
 
-- [ ] **Step 3: Add Phase 2 Markdown builder**
+- [x] **Step 3: Add Phase 2 Markdown builder**
 
 Add this static method inside `ChinaTaxAnalyzer` after `build_markdown()`:
 
@@ -859,7 +859,7 @@ Add this static method inside `ChinaTaxAnalyzer` after `build_markdown()`:
         return "\n".join(lines) + "\n"
 ```
 
-- [ ] **Step 4: Call the Markdown appender in `summary()`**
+- [x] **Step 4: Call the Markdown appender in `summary()`**
 
 Inside `if self.config.include_realized_pnl:`, after `phase2 = self._realized_pnl_summary(fx_rates)`, add:
 
@@ -874,7 +874,7 @@ Inside `if self.config.include_realized_pnl:`, after `phase2 = self._realized_pn
 
 Keep the existing `result.update(phase2)` and `csv_rows.update(...)` lines.
 
-- [ ] **Step 5: Run test and verify GREEN**
+- [x] **Step 5: Run test and verify GREEN**
 
 Run:
 
@@ -884,7 +884,7 @@ uv run --python 3.14 --with pytest python -m pytest "/Users/esonhugh/workspace/p
 
 Expected: PASS.
 
-- [ ] **Step 6: Run all analyzer tests**
+- [x] **Step 6: Run all analyzer tests**
 
 Run:
 
@@ -909,7 +909,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `server/test_china_tax_mcp.py`
 - Modify: `server/ibkr_mcp_server.py`
 
-- [ ] **Step 1: Write failing MCP schema and tool tests**
+- [x] **Step 1: Write failing MCP schema and tool tests**
 
 Append these tests to `server/test_china_tax_mcp.py`:
 
@@ -963,7 +963,7 @@ def test_china_tax_tool_returns_phase2_fields_when_enabled():
     assert data["realized_pnl_comparison"][0]["symbol"] == "AAPL"
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -973,7 +973,7 @@ uv run --python 3.14 --with pytest --with mcp --with plotly --with pandas --with
 
 Expected: FAIL because schema/config wiring is missing.
 
-- [ ] **Step 3: Extend MCP tool schema**
+- [x] **Step 3: Extend MCP tool schema**
 
 In `server/ibkr_mcp_server.py`, inside the `ibkr_china_tax_annual_calc` `properties` dict, after `china_iit_dividend_rate`, add:
 
@@ -996,7 +996,7 @@ In `server/ibkr_mcp_server.py`, inside the `ibkr_china_tax_annual_calc` `propert
                     },
 ```
 
-- [ ] **Step 4: Pass Phase 2 args into `ChinaTaxConfig`**
+- [x] **Step 4: Pass Phase 2 args into `ChinaTaxConfig`**
 
 In `_china_tax_summary()`, replace config creation with:
 
@@ -1013,7 +1013,7 @@ In `_china_tax_summary()`, replace config creation with:
     )
 ```
 
-- [ ] **Step 5: Run MCP tests and verify GREEN**
+- [x] **Step 5: Run MCP tests and verify GREEN**
 
 Run:
 
@@ -1023,7 +1023,7 @@ uv run --python 3.14 --with pytest --with mcp --with plotly --with pandas --with
 
 Expected: PASS.
 
-- [ ] **Step 6: Run focused suite**
+- [x] **Step 6: Run focused suite**
 
 Run:
 
@@ -1048,7 +1048,7 @@ git -C "/Users/esonhugh/workspace/projects/WebStormProjects/cc/self-marketplace/
 - Modify: `skills/china-tax/SKILL.md`
 - Modify: `skills/china-tax/references/official-tax-rules-and-implementation-plan.md`
 
-- [ ] **Step 1: Update skill current capability**
+- [x] **Step 1: Update skill current capability**
 
 In `skills/china-tax/SKILL.md`, update the automated tool capability sentence to include Phase 2:
 
@@ -1056,7 +1056,7 @@ In `skills/china-tax/SKILL.md`, update the automated tool capability sentence to
 The automated `ibkr_china_tax_annual_calc` MCP tool uses IBKR Flex as the primary source for Phase 1 U.S. dividend/withholding estimates and opt-in Phase 2 STK realized-gain evidence. 1042-S is optional follow-up reconciliation/evidence check, not required input. Activity-statement reconciliation beyond loaded Flex cash transactions/trades, options, derivatives, complex corporate actions, cost-basis hazards, and non-USD dividends or gains remain manual/review-required.
 ```
 
-- [ ] **Step 2: Update reference implementation status**
+- [x] **Step 2: Update reference implementation status**
 
 In `skills/china-tax/references/official-tax-rules-and-implementation-plan.md`, change line 5 from:
 
@@ -1070,7 +1070,7 @@ to:
 Implementation status: Phase 1 dividend/withholding calculator exists; Phase 2 STK realized-gain support is implemented as opt-in evidence/estimate workflow with IBKR realized P&L primary口径 and FIFO/diluted comparisons.
 ```
 
-- [ ] **Step 3: Run final focused verification**
+- [x] **Step 3: Run final focused verification**
 
 Run:
 
@@ -1080,7 +1080,7 @@ uv run --python 3.14 --with pytest --with mcp --with plotly --with pandas --with
 
 Expected: all selected tests PASS.
 
-- [ ] **Step 4: Check diagnostics**
+- [x] **Step 4: Check diagnostics**
 
 Run IDE diagnostics or equivalent. Expected: no new diagnostics in `china_tax.py`, `ibkr_mcp_server.py`, or test files.
 

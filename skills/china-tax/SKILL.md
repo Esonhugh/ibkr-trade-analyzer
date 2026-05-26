@@ -30,24 +30,24 @@ Handle these tasks as research, design, evidence preparation, and manual estimat
 
 1. Explain how Form 1042-S, brokerage data, China resident IIT, treaty withholding, and foreign tax credit fit together.
 2. Build evidence tables from loaded IBKR Flex cash transactions.
-3. Draft annual filing calculation workflows for dividends, withholding tax, and later-phase 1042-S reconciliation or realized gains.
+3. Draft annual filing calculation workflows for dividends, withholding tax, opt-in STK realized-gain evidence, and later-phase 1042-S reconciliation.
 4. Produce year-end planning reviews that identify evidence gaps, possible withholding-rate issues, tax-lot/cost-basis issues, currency assumptions, and timing considerations.
 5. Produce implementation plans for deterministic code and tests.
 
-The automated `ibkr_china_tax_annual_calc` MCP tool uses IBKR Flex as the primary Phase 1 source for U.S. dividend/withholding estimates and same-tax-year IBKR USD/RMB FX trade evidence when available. 1042-S is optional follow-up reconciliation/evidence check, not required input. Activity-statement reconciliation beyond loaded Flex cash transactions, realized gains, options, derivatives, cost basis, and non-USD dividends remain manual/review-required. Use `scripts/china_tax_self_check.py` for deterministic local-file self-check reports. Do not claim it produces final tax filing advice; it produces evidence tables, informational estimates, and review checklists.
+The automated `ibkr_china_tax_annual_calc` MCP tool uses IBKR Flex as the primary source for Phase 1 U.S. dividend/withholding estimates and opt-in Phase 2 STK realized-gain evidence. 1042-S is optional follow-up reconciliation/evidence check, not required input. Activity-statement reconciliation beyond loaded Flex cash transactions/trades, options, derivatives, complex corporate actions, cost-basis hazards, and non-USD dividends or gains remain manual/review-required. Use `scripts/china_tax_self_check.py` for deterministic local-file self-check reports. Do not claim it produces final tax filing advice; it produces evidence tables, informational estimates, and review checklists.
 
 ## Annual Filing Calculation Workflow
 
 Use this workflow for annual reporting / 年度报税工具 requests:
 
 1. Clarify tax year, residency assumption, brokerage source, and available documents.
-2. Load IBKR data when available with `ibkr_fetch_data`; call `ibkr_china_tax_annual_calc` for Phase 1 dividend, withholding, RMB conversion, and foreign-tax-credit estimates.
+2. Load IBKR data when available with `ibkr_fetch_data`; call `ibkr_china_tax_annual_calc` for dividend, withholding, RMB conversion, foreign-tax-credit estimates, and opt-in STK realized-gain evidence when requested.
 3. Treat 1042-S as optional follow-up reconciliation/evidence check when official tax-form reconciliation is required.
 4. Use same-tax-year IBKR USD/RMB FX trade evidence before producing automated RMB amounts when available; otherwise require explicit documented rates. Do not present either method as an official SAFE/PBOC/state-tax exchange-rate determination.
 5. Compute only categories with explicit data and assumptions.
-6. Return evidence summary, China IIT estimate, treaty sanity check, missing inputs, and filing support checklist.
+6. Return evidence summary, China IIT estimate, treaty sanity check, realized-gain review items when enabled, missing inputs, and filing support checklist.
 
-Start Phase 1 with U.S.-source dividends and withholding tax. Defer realized securities gains, options, complex derivatives, and FX gain/loss unless the user explicitly asks for planning treatment.
+Start with U.S.-source dividends and withholding tax. Use `include_realized_pnl=True` only for opt-in STK realized-gain evidence/estimate workflows. Defer options, complex derivatives, corporate-action hazards, and FX gain/loss unless the user explicitly asks for planning treatment.
 
 ## Year-End Tax Planning Workflow
 
@@ -88,7 +88,7 @@ When asked to implement commands or calculators, follow test-first development:
 - Add deterministic pure functions for dividend/withholding aggregation, RMB translation, treaty sanity checks, and foreign tax credit calculation.
 - Require failing fixture tests before implementation.
 - Start with dividend/withholding Phase 1.
-- Add realized-gain and cost-basis support only after brokerage fixtures are validated.
+- Keep realized-gain support opt-in, STK-only, and backed by fixture tests before expanding scope.
 - Preserve evidence records in output rather than only returning totals.
 
 ## Additional Resources

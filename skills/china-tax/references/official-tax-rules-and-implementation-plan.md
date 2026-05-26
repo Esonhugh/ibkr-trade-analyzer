@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-05-24. Recheck official IRS, State Taxation Administration, and treaty sources for the relevant tax year before preparing an actual filing.
 
-Implementation status: reference workflows, command workflows, `scripts/china_tax_self_check.py`, and the Phase 1 `ibkr_china_tax_annual_calc` MCP tool exist for dividend/withholding evidence reports. Advanced realized-gain tax treatment remains future work.
+Implementation status: Phase 1 dividend/withholding calculator exists; Phase 2 STK realized-gain support is implemented as an opt-in evidence/estimate workflow with IBKR realized P&L primary口径 and FIFO/diluted comparisons. Advanced realized-gain tax treatment beyond STK, options/derivatives, corporate-action hazards, and final filing positions remain review-required.
 
 This reference summarizes official-source rules and implementation guidance for China resident overseas-investment tax evidence workflows. It is a tax-data preparation and calculation reference, not legal, tax, or investment advice. Always label output as an informational estimate and recommend confirmation with a qualified tax professional or the competent tax authority before filing.
 
@@ -96,14 +96,18 @@ Implement these categories first:
 
 ### Phase 2 Scope
 
-Add after Phase 1 is validated:
+Implemented as an opt-in STK-only evidence/estimate workflow:
 
-1. Realized securities gains as property transfer income using IBKR realized P&L.
-2. Security-by-security cost basis evidence and commission handling.
-3. Country/region credit-limit grouping.
-4. Excess foreign tax carryforward schedule.
-5. 1042-S PDF/text import or manual 1042-S CSV reconciliation if reliable extraction is available.
-6. Annual tax package generation matching “境外所得个人所得税抵免明细表” columns.
+1. Realized stock gains as property transfer income candidates using IBKR realized P&L as the primary口径.
+2. Security-by-security FIFO and diluted/breakeven comparison rows for review.
+3. Review-required records for losses, non-STK realized P&L, non-USD gains, missing FX evidence, and incomplete lot history.
+
+Still future work:
+
+1. Country/region credit-limit grouping beyond current dividend/withholding estimate outputs.
+2. Excess foreign tax carryforward schedule.
+3. 1042-S PDF/text import or manual 1042-S CSV reconciliation if reliable extraction is available.
+4. Annual tax package generation matching “境外所得个人所得税抵免明细表” columns.
 
 ## Data Mapping
 
@@ -116,7 +120,7 @@ Map available IBKR data into tax categories:
 | Dividends | Interest/dividends/bonus income | Use gross dividend where available. |
 | Withholding tax | Foreign tax paid | Separate by country/source when possible. |
 | Interest income/expense | Interest income or financing cost review | Treaty and China category treatment require confirmation. |
-| Realized P&L | Property transfer income candidate | Phase 2 only; avoid assuming final filing treatment. |
+| Realized P&L | Property transfer income candidate | Opt-in Phase 2 STK evidence/estimate only; avoid assuming final filing treatment. |
 | Commissions | Cost/expense evidence | Treatment depends on category and filing practice. |
 | FX conversions | Evidence for currency movement | Do not treat all FX movements as taxable without explicit design. |
 | Cash balances | Reconciliation | Not income by itself. |
@@ -228,21 +232,22 @@ Design takeaways for this plugin:
 
 ### Analyzer Module
 
-The existing analyzer module `skills/ibkr-trade-analyzer/scripts/analyzers/china_tax.py` provides deterministic Phase 1 dividend/withholding evidence functions for loaded IBKR data:
+The shared analyzer module `ibkr_analyzer_lib/analyzers/china_tax.py` provides deterministic dividend/withholding evidence functions and opt-in STK realized-gain evidence for loaded IBKR data:
 
-- `ChinaTaxConfig`: tax year, China tax rates, FX mode, and treaty sanity-check options.
+- `ChinaTaxConfig`: tax year, China tax rates, realized P&L opt-in flags, FX mode, and treaty sanity-check options.
 - Dividend and withholding collection from loaded IBKR cash transactions.
-- Country/category grouping, RMB translation from explicit or IBKR FX evidence, foreign-tax-credit estimates, and Markdown/CSV-ready report structures.
+- Country/category grouping, RMB translation from IBKR FX evidence, foreign-tax-credit estimates, and Markdown/CSV-ready report structures.
+- STK realized-gain property-transfer candidate estimates with IBKR realized P&L primary口径 plus FIFO/diluted comparison rows.
 
-The local-file self-check CLI `skills/china-tax/scripts/china_tax_self_check.py` provides offline evidence parsing and report generation for Flex XML/CSV, 1042-S CSV, explicit RMB FX CSV, and IBKR tax-report ZIP evidence.
+The local-file self-check CLI `skills/china-tax/scripts/china_tax_self_check.py` wraps `ibkr_analyzer_lib.china_tax_self_check` for offline evidence parsing and report generation from Flex XML/CSV, 1042-S CSV, explicit RMB FX CSV, and IBKR tax-report ZIP evidence.
 
-Keep functions deterministic and testable. Avoid network FX calls in Phase 1 unless explicitly requested.
+Keep functions deterministic and testable. Avoid network FX calls unless explicitly requested.
 
 ### CLI / MCP Surface
 
 Current surfaces:
 
-- MCP tool: `ibkr_china_tax_annual_calc` for loaded Flex data Phase 1 dividend/withholding estimates.
+- MCP tool: `ibkr_china_tax_annual_calc` for loaded Flex data dividend/withholding estimates and opt-in STK realized-gain evidence.
 - Local-file CLI: `skills/china-tax/scripts/china_tax_self_check.py` for offline evidence reports.
 - Commands: `commands/china-tax-annual.md` and `commands/china-tax-year-end-plan.md`.
 
@@ -252,6 +257,9 @@ Key parameters and inputs:
 |---|---|---|
 | MCP | `tax_year` | Annual calculation year |
 | MCP | `china_iit_dividend_rate` | Default 0.20 informational estimate |
+| MCP | `include_realized_pnl` | Opt into Phase 2 STK realized-gain evidence |
+| MCP | `realized_pnl_asset_types` | Supported realized P&L asset types; currently STK |
+| MCP | `china_iit_property_transfer_rate` | Default 0.20 property-transfer candidate estimate |
 | MCP | `output_csv` | Optional CSV evidence output directory |
 | CLI | `--form-1042s` | Optional structured 1042-S CSV reconciliation evidence |
 | CLI | `--fx-rates` | Optional explicit currency-to-RMB CSV evidence |
@@ -263,7 +271,7 @@ Annual command workflow:
 1. Load Flex data as the primary calculation source or use local files through the CLI.
 2. Ask for tax year if absent.
 3. Ask for RMB FX conversion source only if same-tax-year IBKR USD/RMB FX trade evidence is unavailable or the user wants a different documented rate source.
-4. Run the Phase 1 dividend/withholding calculator or local-file self-check script; mark 1042-S as optional reconciliation/evidence check.
+4. Run the dividend/withholding calculator, opt into realized P&L only when requested, or use the local-file self-check script; mark 1042-S as optional reconciliation/evidence check.
 5. Return Markdown report with official-source disclaimer and filing checklist.
 
 ### Test Coverage
@@ -273,6 +281,9 @@ Current tests cover small fixture data and safety paths:
 - U.S. dividend 100 USD, U.S. withholding 10 USD, China rate 20%, RMB rate 7.0 → China tax 140 RMB, credit 70 RMB, top-up 70 RMB.
 - U.S. dividend 100 USD, U.S. withholding 30 USD, China rate 20%, RMB rate 7.0 → China tax 140 RMB, credit 140 RMB, top-up 0, excess 70 RMB.
 - Missing FX rate → `review_required`, no invented RMB amount.
+- STK realized gain/loss estimate and review-required behavior when `include_realized_pnl=True`.
+- FIFO and diluted/breakeven comparison rows for realized P&L.
+- MCP schema and handler wiring for Phase 2 realized P&L parameters.
 - Local-file CLI path handling, including paths containing spaces.
 - Deterministic Markdown output ordering.
 
@@ -284,12 +295,12 @@ Current tests cover small fixture data and safety paths:
 - Keep U.S. treaty withholding check separate from China IIT calculation.
 - Preserve all source records in evidence output.
 
-## Open Questions Before Coding
+## Implementation Decisions
 
-Resolved Phase 1 decisions:
+Resolved decisions:
 
 1. Use IBKR Flex data as the primary calculation source; 1042-S is optional follow-up reconciliation/evidence check, not required input.
 2. Use same-tax-year IBKR USD/RMB FX trade evidence first when available; require explicit documented rates when unavailable or when the user chooses another method.
-3. Keep Phase 1 to dividends/withholding only; realized capital gains stay Phase 2.
+3. Keep realized P&L support opt-in, STK-only, and evidence-oriented; non-STK, non-USD, incomplete lots, losses, and complex events remain `review_required`.
 4. Required output formats are Markdown plus CSV evidence tables.
-5. Group Phase 1 calculations by source country/category while preserving source-record evidence rows for audit traceability.
+5. Group dividend calculations by source country/category while preserving source-record evidence rows for audit traceability.

@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-import sys
 from datetime import datetime
-from pathlib import Path
 
-_scripts_dir = Path(__file__).resolve().parent.parent / "skills" / "ibkr-trade-analyzer" / "scripts"
-sys.path.insert(0, str(_scripts_dir))
-
-from analyzers.china_tax import ChinaTaxAnalyzer, ChinaTaxConfig, MissingFxRateError
-from analyzers.diluted_cost import DilutedCostAnalyzer
-from models import AccountData, CashTransaction, Trade
+from ibkr_analyzer_lib.analyzers.china_tax import ChinaTaxAnalyzer, ChinaTaxConfig, MissingFxRateError
+from ibkr_analyzer_lib.analyzers.diluted_cost import DilutedCostAnalyzer
+from ibkr_analyzer_lib.models import AccountData, CashTransaction, Trade
 
 
 def _sample_data() -> AccountData:

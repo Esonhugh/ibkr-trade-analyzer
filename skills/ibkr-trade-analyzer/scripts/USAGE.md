@@ -92,27 +92,23 @@ cache/
 
 To force a fresh API fetch during local development, delete today's cached file:
 ```bash
-rm "${CLAUDE_PLUGIN_DATA:-$CLAUDE_PLUGIN_ROOT/cache}"/*-flex-ibkr-$(date +%Y-%m-%d).xml
+cache_dir="${PLUGIN_DATA:-${CLAUDE_PLUGIN_DATA:-$(pwd)}}/cache"
+rm "$cache_dir"/*-flex-ibkr-$(date +%Y-%m-%d).xml
 ```
 
 ## Module Overview
 
+`skills/ibkr-trade-analyzer/scripts/ibkr_analyzer.py` is the standalone CLI wrapper. Shared implementation now lives in `ibkr_analyzer_lib/` at the project root.
+
+```text
+ibkr_analyzer_lib/
+├── models.py
+├── loader.py
+├── report.py
+└── analyzers/
 ```
-scripts/
-├── ibkr_analyzer.py     ← entry point: argparse + main(), PEP 723 deps header
-├── models.py            ← dataclasses: Trade, CashTransaction, OpenPosition, CashBalance, AccountData
-├── loader.py            ← DataLoader: Flex API polling, CSV/XML parsing, auto-save/cache, FIFO PnL
-├── analyzers/           ← analysis subpackage (one file per analyzer)
-│   ├── __init__.py      ← re-exports all seven analyzer classes
-│   ├── trade.py         ← TradeAnalyzer
-│   ├── pnl.py           ← PnLAnalyzer
-│   ├── portfolio.py     ← PortfolioAnalyzer
-│   ├── cost.py          ← CostAnalyzer
-│   ├── diluted_cost.py  ← DilutedCostAnalyzer (摊薄成本法)
-│   ├── price.py         ← PriceAnalyzer
-│   └── fx.py            ← FxAnalyzer
-└── report.py            ← ReportGenerator: terminal summary, Markdown tables, interactive HTML
-```
+
+The wrapper keeps the PEP 723 dependency header and CLI argument parsing, then imports `DataLoader`, the analyzer classes, and `ReportGenerator` from the shared library package.
 
 ### `models.py` — Data structures
 
@@ -129,7 +125,7 @@ Pure dataclasses, no external dependencies.
 ### `loader.py` — Data loading
 
 ```python
-from loader import DataLoader
+from ibkr_analyzer_lib.loader import DataLoader
 from pathlib import Path
 
 # Flex Web Service — auto-saves XML to data_dir
@@ -152,7 +148,7 @@ All analyzers accept `list[Trade]` (and other model lists) and expose a `.summar
 Import from the package directly — `__init__.py` re-exports everything:
 
 ```python
-from analyzers import TradeAnalyzer, PnLAnalyzer, PortfolioAnalyzer, CostAnalyzer, PriceAnalyzer, FxAnalyzer, DilutedCostAnalyzer
+from ibkr_analyzer_lib.analyzers import TradeAnalyzer, PnLAnalyzer, PortfolioAnalyzer, CostAnalyzer, PriceAnalyzer, FxAnalyzer, DilutedCostAnalyzer
 
 ta   = TradeAnalyzer(data.trades)
 pa   = PnLAnalyzer(data.trades)
@@ -187,7 +183,7 @@ charts  = [price_a.price_vs_trades_data(s, df) for s, df in prices.items()]
 ### `report.py` — Report generation
 
 ```python
-from report import ReportGenerator
+from ibkr_analyzer_lib.report import ReportGenerator
 from pathlib import Path
 
 rg = ReportGenerator(
@@ -227,7 +223,8 @@ Configure credentials (prompted automatically at install time):
 uv run ibkr_analyzer.py --mode flex --dump-xml debug.xml --output reports/
 
 # Force fresh fetch today during local development (delete cached XML first)
-rm "${CLAUDE_PLUGIN_DATA:-$CLAUDE_PLUGIN_ROOT/cache}"/*-flex-ibkr-$(date +%Y-%m-%d).xml
+cache_dir="${PLUGIN_DATA:-${CLAUDE_PLUGIN_DATA:-$(pwd)}}/cache"
+rm "$cache_dir"/*-flex-ibkr-$(date +%Y-%m-%d).xml
 uv run ibkr_analyzer.py --mode flex --output reports/
 
 # Analyse only stocks, skip expensive price fetch

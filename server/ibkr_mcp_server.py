@@ -13,7 +13,7 @@
 
 Exposes structured tools for analyzing Interactive Brokers trading data.
 Reads credentials from environment variables injected by Claude Code.
-Imports existing analyzer modules from the scripts/ directory.
+Imports shared analyzer modules from ibkr_analyzer_lib.
 """
 
 from __future__ import annotations
@@ -35,21 +35,30 @@ def _first_env(*names: str) -> str:
     return ""
 
 
-# Add scripts directory to sys.path so we can import existing modules.
-# Prefer host-provided plugin root env vars, then derive from this file.
-_plugin_root = (
-    _first_env("PLUGIN_ROOT", "CODEX_PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT")
-    or str(Path(__file__).resolve().parent.parent)
+_ROOT_ENV_NAMES = ("PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT")
+_DATA_ENV_NAMES = ("PLUGIN_DATA", "CLAUDE_PLUGIN_DATA")
+_FLEX_TOKEN_ENV_NAMES = ("IBKR_FLEX_TOKEN", "CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN")
+_QUERY_ID_ENV_NAMES = ("IBKR_QUERY_ID", "CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID")
+_PROXY_ENV_NAMES = (
+    "PROXY",
+    "CLAUDE_PLUGIN_OPTION_PROXY",
+    "ALL_PROXY",
+    "HTTPS_PROXY",
+    "HTTP_PROXY",
 )
-_plugin_data = _first_env("PLUGIN_DATA", "CODEX_PLUGIN_DATA", "CLAUDE_PLUGIN_DATA")
-_scripts_dir = Path(_plugin_root) / "skills" / "ibkr-trade-analyzer" / "scripts"
-sys.path.insert(0, str(_scripts_dir))
+
+# Prefer host-provided plugin root env vars, then derive from this file.
+_project_root = Path(__file__).resolve().parent.parent
+_plugin_root = _first_env(*_ROOT_ENV_NAMES) or str(_project_root)
+_plugin_data = _first_env(*_DATA_ENV_NAMES)
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from analyzers import (
+from ibkr_analyzer_lib.analyzers import (
     ChinaTaxAnalyzer,
     ChinaTaxConfig,
     CostAnalyzer,
@@ -61,9 +70,9 @@ from analyzers import (
     PriceAnalyzer,
     TradeAnalyzer,
 )
-from loader import DataLoader
-from models import AccountData
-from report import ReportGenerator
+from ibkr_analyzer_lib.loader import DataLoader
+from ibkr_analyzer_lib.models import AccountData
+from ibkr_analyzer_lib.report import ReportGenerator
 
 # --- Session state ---
 _session_data: AccountData | None = None
@@ -72,30 +81,9 @@ _data_source_info: str = ""
 # --- Credentials from env ---
 # Primary: injected by Claude .mcp.json ${user_config.*} expansion.
 # Fallback: *_PLUGIN_OPTION_* names used by plugin host subprocess integrations.
-FLEX_TOKEN = (
-    _first_env(
-        "IBKR_FLEX_TOKEN",
-        "CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN",
-        "CODEX_PLUGIN_OPTION_IBKR_FLEX_TOKEN",
-    )
-)
-QUERY_ID = (
-    _first_env(
-        "IBKR_QUERY_ID",
-        "CLAUDE_PLUGIN_OPTION_IBKR_QUERY_ID",
-        "CODEX_PLUGIN_OPTION_IBKR_QUERY_ID",
-    )
-)
-PROXY = (
-    _first_env(
-        "PROXY",
-        "CLAUDE_PLUGIN_OPTION_PROXY",
-        "CODEX_PLUGIN_OPTION_PROXY",
-        "ALL_PROXY",
-        "HTTPS_PROXY",
-        "HTTP_PROXY",
-    )
-)
+FLEX_TOKEN = _first_env(*_FLEX_TOKEN_ENV_NAMES)
+QUERY_ID = _first_env(*_QUERY_ID_ENV_NAMES)
+PROXY = _first_env(*_PROXY_ENV_NAMES)
 
 
 def _data_dir() -> Path:

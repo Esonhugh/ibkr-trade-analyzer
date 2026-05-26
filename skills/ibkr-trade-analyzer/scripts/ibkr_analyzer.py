@@ -29,9 +29,20 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from analyzers import CostAnalyzer, DilutedCostAnalyzer, FxAnalyzer, LifoAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
-from loader import DataLoader
-from report import ReportGenerator
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+from ibkr_analyzer_lib.analyzers import CostAnalyzer, DilutedCostAnalyzer, FxAnalyzer, LifoAnalyzer, PnLAnalyzer, PortfolioAnalyzer, PriceAnalyzer, TradeAnalyzer
+from ibkr_analyzer_lib.loader import DataLoader
+from ibkr_analyzer_lib.report import ReportGenerator
+
+
+def _data_dir() -> Path:
+    plugin_data = os.environ.get("PLUGIN_DATA") or os.environ.get("CLAUDE_PLUGIN_DATA")
+    if plugin_data:
+        return Path(plugin_data) / "cache"
+    return _PROJECT_ROOT / "cache"
 
 
 def main() -> None:
@@ -74,8 +85,7 @@ def main() -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    _plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    data_dir = Path(_plugin_root) / "cache" if _plugin_root else Path(__file__).parent.parent.parent / "cache"
+    data_dir = _data_dir()
 
     # Credential resolution: CLI args → plugin userConfig env vars (injected by Claude Code)
     token = args.token or os.environ.get("CLAUDE_PLUGIN_OPTION_IBKR_FLEX_TOKEN")
