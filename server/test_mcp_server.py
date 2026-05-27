@@ -6,7 +6,7 @@ import asyncio
 import json
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 _plugin_root = str(Path(__file__).resolve().parent.parent)
@@ -455,6 +455,72 @@ class TestUnknownTool:
         result = run(srv.call_tool("nonexistent_tool", {}))
         data = parse_result(result)
         assert "error" in data
+
+
+class TestSessionCacheFreshness:
+    def setup_method(self):
+        srv._session_data = None
+        srv._session_loaded_at = None
+
+    def test_stale_session_loads_todays_cache(self, monkeypatch, tmp_path):
+        stale_data = srv.AccountData(account_id="STALE")
+        fresh_data = srv.AccountData(account_id="FRESH")
+        srv._session_data = stale_data
+        srv._session_loaded_at = (datetime.now() - timedelta(days=1)).timestamp()
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        cached_xml = tmp_path / f"flex-{today}.xml"
+        cached_xml.write_text("<FlexStatement />", encoding="utf-8")
+
+        monkeypatch.setattr(srv, "FLEX_TOKEN", "token")
+        monkeypatch.setattr(srv, "QUERY_ID", "query")
+        monkeypatch.setattr(srv, "_data_dir", lambda: tmp_path)
+        monkeypatch.setattr(srv.DataLoader, "from_file", lambda path, fmt=None: fresh_data)
+
+        def fail_from_flex(*args, **kwargs):
+            raise AssertionError("stale session should load today's XML cache before Flex API")
+
+        monkeypatch.setattr(srv.DataLoader, "from_flex", fail_from_flex)
+
+        result = srv._load_data(mode="flex")
+
+        assert result is fresh_data
+        assert srv._session_data is fresh_data
+        assert srv._data_source_info == f"Loaded from cache: {cached_xml.name}"
+
+    def test_force_refresh_bypasses_fresh_session_and_updates_timestamp(self, monkeypatch, tmp_path):
+        session_data = srv.AccountData(account_id="SESSION")
+        fresh_data = srv.AccountData(account_id="FRESH")
+        fake_now = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0).timestamp()
+        srv._session_data = session_data
+        srv._session_loaded_at = fake_now
+
+        monkeypatch.setattr(srv, "FLEX_TOKEN", "token")
+        monkeypatch.setattr(srv, "QUERY_ID", "query")
+        monkeypatch.setattr(srv, "_data_dir", lambda: tmp_path)
+        monkeypatch.setattr(srv.time, "time", lambda: fake_now + 60)
+        monkeypatch.setattr(srv.DataLoader, "from_flex", lambda *args, **kwargs: fresh_data)
+
+        result = srv._load_data(mode="flex", force_refresh=True)
+
+        assert result is fresh_data
+        assert srv._session_data is fresh_data
+        assert srv._session_loaded_at == fake_now + 60
+        assert srv._data_source_info == f"Fetched from Flex API ({datetime.now().strftime('%Y-%m-%d')})"
+
+    def test_file_mode_updates_session_timestamp(self, monkeypatch):
+        loaded_data = srv.AccountData(account_id="FILE")
+        fake_now = datetime.now().replace(hour=13, minute=0, second=0, microsecond=0).timestamp()
+
+        monkeypatch.setattr(srv.time, "time", lambda: fake_now)
+        monkeypatch.setattr(srv.DataLoader, "from_file", lambda source: loaded_data)
+
+        result = srv._load_data(mode="file", source="/tmp/activity.xml")
+
+        assert result is loaded_data
+        assert srv._session_data is loaded_data
+        assert srv._session_loaded_at == fake_now
+        assert srv._data_source_info == "Loaded from file: /tmp/activity.xml"
 
 
 class TestAutoLoadWithoutData:

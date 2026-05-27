@@ -1,6 +1,6 @@
 ---
 description: "Calculate IBKR portfolio holdings, allocation, concentration, cash, and position sizing"
-argument-hint: "[--mode=flex|file] [--source=/path/activity.xml] [--asset-types=STK,OPT]"
+argument-hint: "[--mode=flex|file] [--source=/path/activity.xml] [--asset-types=STK,OPT] [--ff]"
 allowed-tools: ["mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_fetch_data", "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_portfolio", "mcp__plugin_ibkr-trade-analyzer_ibkr-analyzer__ibkr_analyze"]
 ---
 
@@ -8,7 +8,10 @@ Review IBKR portfolio structure using read-only reporting data.
 
 ## Workflow
 
-1. Ensure data is loaded with `ibkr_fetch_data`.
+1. Ensure data is loaded:
+   - If the user provided `--ff`, call `ibkr_fetch_data(mode="flex", force_refresh=true)`.
+   - If the user provided a local file, call `ibkr_fetch_data(mode="file", source="<path>")`.
+   - Otherwise call `ibkr_fetch_data(mode="flex")`.
 2. Call `ibkr_portfolio` for the full snapshot.
 3. If the user requested asset-type filtering, call `ibkr_analyze(sections=["portfolio"], asset_types="<types>")`.
 

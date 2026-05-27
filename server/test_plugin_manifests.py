@@ -144,3 +144,10 @@ def test_command_docs_exist() -> None:
             f"{command_name} has unknown allowed-tools: "
             f"{sorted(set(allowed_tools) - KNOWN_IBKR_MCP_TOOLS)}"
         )
+
+
+def test_portfolio_command_documents_force_fresh_flag() -> None:
+    content = (ROOT / "commands" / "portfolio.md").read_text()
+
+    assert "--ff" in content
+    assert 'ibkr_fetch_data(mode="flex", force_refresh=true)' in content

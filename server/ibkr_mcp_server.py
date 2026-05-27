@@ -22,6 +22,7 @@ import csv
 import json
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -76,7 +77,16 @@ from ibkr_analyzer_lib.report import ReportGenerator
 
 # --- Session state ---
 _session_data: AccountData | None = None
+_session_loaded_at: float | None = None
 _data_source_info: str = ""
+
+
+def _is_session_cache_fresh(now: float | None = None) -> bool:
+    if _session_data is None or _session_loaded_at is None:
+        return False
+    current = datetime.fromtimestamp(time.time() if now is None else now).date()
+    loaded = datetime.fromtimestamp(_session_loaded_at).date()
+    return loaded == current
 
 # --- Credentials from env ---
 # Primary: injected by Claude .mcp.json ${user_config.*} expansion.
@@ -95,9 +105,9 @@ def _data_dir() -> Path:
 
 def _load_data(mode: str = "flex", source: str | None = None, force_refresh: bool = False) -> AccountData:
     """Load or return cached AccountData. Raises RuntimeError on failure."""
-    global _session_data, _data_source_info
+    global _session_data, _session_loaded_at, _data_source_info
 
-    if _session_data is not None and not force_refresh:
+    if _session_data is not None and not force_refresh and _is_session_cache_fresh():
         return _session_data
 
     if mode == "flex":
@@ -133,6 +143,7 @@ def _load_data(mode: str = "flex", source: str | None = None, force_refresh: boo
     else:
         raise RuntimeError(f"Unknown mode: {mode}. Use 'flex' or 'file'.")
 
+    _session_loaded_at = time.time()
     return _session_data
 
 
