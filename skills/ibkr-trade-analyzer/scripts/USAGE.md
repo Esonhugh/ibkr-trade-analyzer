@@ -1,6 +1,6 @@
 # IBKR Analyzer Scripts — Usage Guide
 
-Plugin version: **1.1.0**  
+Plugin version: **2.2.0**  
 Scripts are split across focused modules under `scripts/`.  
 Entry point: **`ibkr_analyzer.py`** (PEP 723 — run with `uv run`, no venv setup needed).
 

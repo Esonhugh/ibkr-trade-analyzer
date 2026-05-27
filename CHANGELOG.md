@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.0] - 2026-05-28
+
+### Added
+
+- `portfolio --ff` workflow documentation for forcing a fresh Flex fetch before portfolio analysis.
+- Regression tests for session cache freshness, force refresh bypass, timestamp updates, and portfolio command docs.
+
+### Changed
+
+- MCP session cache now reuses in-memory data only when it was loaded on the current local day; stale sessions fall through to today's XML cache or Flex API refresh.
+
 ## [2.1.0] - 2026-05-21
 
 ### Added

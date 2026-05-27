@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![版本](https://img.shields.io/badge/版本-2.0.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![版本](https://img.shields.io/badge/版本-2.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 **一个用于分析 Interactive Brokers 交易历史的 Claude Code 插件 — 只读分析，零风险。**
@@ -21,7 +21,19 @@
 | **风险评估** | 6 个维度的 0-100 评分，附具体风险预警 |
 | **价格图表** | 叠加买卖标记的历史价格走势图 |
 
-### v2.0.0 新特性
+### v2.2.0 新特性
+
+- **按日期检查 session 缓存** — 长时间运行的 MCP session 只复用当天加载的 IBKR 内存数据；过期数据会回落到当天 XML 缓存或尝试一次 Flex API 更新。
+- **Portfolio 强制刷新参数** — `/ibkr-trade-analyzer:portfolio --ff` 会在计算持仓前调用 `ibkr_fetch_data(mode="flex", force_refresh=true)`。
+- **回归测试覆盖** — 新增 stale session、force refresh、时间戳更新和 portfolio 命令文档测试。
+
+### v2.1.0
+
+- **工作流命令** — 新增账户摘要、组合审查、现金/外汇、完整报告和定向分析命令工作流。
+- **改进 skill 路由** — 将自然语言 IBKR 请求映射到更聚焦的只读 MCP 工作流。
+- **更强的命令校验** — 打包测试验证命令 frontmatter 和允许的 MCP tool 引用。
+
+### v2.0.0
 
 - **Claude Code 插件清单** — 当前 checkout 包含 Claude Code 插件清单 (`.claude-plugin/plugin.json`)
 - **宿主 MCP 启动路径** — Claude 使用 `.mcp.json` 启动同一个 MCP 服务端

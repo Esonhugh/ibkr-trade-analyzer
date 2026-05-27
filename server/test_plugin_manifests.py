@@ -91,7 +91,7 @@ def test_claude_plugin_manifest() -> None:
     manifest = load_json(".claude-plugin/plugin.json")
 
     assert manifest["name"] == "ibkr-trade-analyzer"
-    assert manifest["version"] == "2.1.0"
+    assert manifest["version"] == "2.2.0"
     assert manifest["userConfig"]["ibkr_flex_token"]["sensitive"] is True
     assert manifest["userConfig"]["ibkr_query_id"]["required"] is True
 
@@ -100,7 +100,7 @@ def test_claude_marketplace_manifest() -> None:
     marketplace = load_json(".claude-plugin/marketplace.json")
 
     assert marketplace["name"] == "ibkr-trade-analyzer"
-    assert marketplace["metadata"]["version"] == "2.1.0"
+    assert marketplace["metadata"]["version"] == "2.2.0"
     assert marketplace["plugins"][0]["name"] == "ibkr-trade-analyzer"
     assert marketplace["plugins"][0]["source"] == "./"
 

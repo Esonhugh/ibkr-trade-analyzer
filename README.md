@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A Claude Code plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
@@ -21,7 +21,13 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 | **Risk Assessment** | Scored 0-100 across 6 dimensions with specific warnings |
 | **Price Charts** | Historical price data with buy/sell trade markers overlaid |
 
-### What's New in v2.1.0
+### What's New in v2.2.0
+
+- **Date-aware session cache** — long-lived MCP sessions now reuse in-memory IBKR data only when it was loaded today; stale sessions fall through to today's XML cache or one Flex API refresh.
+- **Portfolio force refresh** — `/ibkr-trade-analyzer:portfolio --ff` forces `ibkr_fetch_data(mode="flex", force_refresh=true)` before calculating holdings.
+- **Regression coverage** — server tests now cover stale session refresh, force refresh bypass, timestamp updates, and portfolio command documentation.
+
+### v2.1.0
 
 - **Workflow commands** — adds account summary, portfolio, cash/FX, report generation, and targeted analysis command workflows.
 - **Improved skill routing** — maps natural-language IBKR requests to focused read-only MCP workflows.
