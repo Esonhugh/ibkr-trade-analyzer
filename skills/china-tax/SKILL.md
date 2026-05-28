@@ -1,7 +1,14 @@
 ---
 name: china-tax
-description: Use for China tax-resident individual overseas brokerage evidence questions, especially IBKR Flex dividends, U.S. withholding tax, foreign tax credit, RMB FX evidence, 美股分红预扣税, 境外所得抵免, 年度报税工具, and year-end China tax planning. Use as an official-source workflow reference, not final filing advice.
-version: 0.1.0
+description: >
+  This skill should be used when the user asks about China tax-resident
+  individual overseas brokerage evidence workflows, especially IBKR Flex
+  dividends, Form 1042-S reconciliation, U.S. withholding tax, foreign tax
+  credit, RMB FX evidence, 美股分红预扣税, 境外所得抵免, IBKR 年度报税工具,
+  1042-S 怎么用于中国个税, 境外股票收益报税, and neutral year-end evidence
+  readiness for China tax filing. Use it as an official-source workflow
+  reference and informational estimate guide, not final filing advice.
+version: 2.2.0
 ---
 
 # China Tax Reference and Planning for Overseas Brokerage Data
@@ -38,7 +45,7 @@ The automated `ibkr_china_tax_annual_calc` MCP tool uses IBKR Flex as the primar
 
 ## Annual Filing Calculation Workflow
 
-Use this workflow for annual reporting / 年度报税工具 requests:
+Use this workflow for annual reporting / 年度报税工具 requests. When slash commands are available, use `/ibkr-trade-analyzer:china-tax-annual` for annual filing evidence reviews.
 
 1. Clarify tax year, residency assumption, brokerage source, and available documents.
 2. Load IBKR data when available with `ibkr_fetch_data`; call `ibkr_china_tax_annual_calc` for dividend, withholding, RMB conversion, foreign-tax-credit estimates, and opt-in STK realized-gain evidence when requested.
@@ -51,7 +58,7 @@ Start with U.S.-source dividends and withholding tax. Use `include_realized_pnl=
 
 ## Year-End Tax Planning Workflow
 
-Use this workflow for 年前税务优化建议 / year-end planning requests:
+Use this workflow for 年前税务优化建议 / year-end planning requests. When slash commands are available, use `/ibkr-trade-analyzer:china-tax-year-end-plan` for neutral year-end planning reviews.
 
 1. Load current portfolio, realized P&L, dividends, withholding, cash, FX, and cost-basis data when available.
 2. Separate compliance evidence issues from planning observations.

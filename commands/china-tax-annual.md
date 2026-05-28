@@ -18,10 +18,11 @@ Generate a China resident annual overseas investment tax evidence review and inf
    - Otherwise call `ibkr_fetch_data(mode="flex")`.
 5. Filter and reconcile evidence to the selected tax year; mark out-of-year records separately.
 6. Call `ibkr_china_tax_annual_calc(tax_year=<year>)` for the Phase 1 IBKR Flex dividend/withholding estimate using IBKR FX evidence.
-7. Call `ibkr_cost_analysis` only when extra fee, interest, or dividend reconciliation detail is needed.
-8. Call `ibkr_pnl_summary` only if the user explicitly requests realized gain planning; do not include realized gains in the Phase 1 dividend/withholding estimate by default.
-9. If official 1042-S reconciliation is needed, mark it as a manual review item outside the Phase 1 automated calculator. Do not invent RMB rates.
-10. Produce Markdown using the `china-tax` output templates:
+7. If the user explicitly requests STK realized-gain evidence, call `ibkr_china_tax_annual_calc(tax_year=<year>, include_realized_pnl=True, realized_pnl_asset_types=["STK"], china_iit_property_transfer_rate=<rate or 0.20>)` and keep realized-gain results separate from dividend/withholding estimates.
+8. Call `ibkr_cost_analysis` only when extra fee, interest, or dividend reconciliation detail is needed.
+9. Call `ibkr_pnl_summary` only when broader realized P&L context is useful beyond the opt-in STK evidence table.
+10. If official 1042-S reconciliation is needed, mark it as a manual review item outside the Phase 1 automated calculator. Do not invent RMB rates.
+11. Produce Markdown using the `china-tax` output templates:
    - Evidence Summary
    - China IIT Estimate
    - Treaty Withholding Sanity Check
@@ -30,7 +31,7 @@ Generate a China resident annual overseas investment tax evidence review and inf
 
 ## Script Usage
 
-When the user provides local files, prefer the deterministic script in `skills/china-tax/scripts/china_tax_self_check.py`:
+When the user provides local files and shell execution is available, provide this command for the user to run with the deterministic script in `skills/china-tax/scripts/china_tax_self_check.py`:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/china-tax/scripts/china_tax_self_check.py" \

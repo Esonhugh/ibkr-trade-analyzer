@@ -151,3 +151,32 @@ def test_portfolio_command_documents_force_fresh_flag() -> None:
 
     assert "--ff" in content
     assert 'ibkr_fetch_data(mode="flex", force_refresh=true)' in content
+
+
+def test_readmes_use_manifest_config_keys() -> None:
+    manifest = load_json(".claude-plugin/plugin.json")
+    config_keys = set(manifest["userConfig"])
+
+    for readme_name in ("README.md", "README-zh.md"):
+        content = (ROOT / readme_name).read_text()
+        assert "ibkr_flex_token" in content
+        assert "ibkr_query_id" in content
+        assert "| `flex_token`" not in content
+        assert "| `query_id`" not in content
+        assert {"ibkr_flex_token", "ibkr_query_id"}.issubset(config_keys)
+
+
+def test_china_tax_commands_do_not_claim_unavailable_shell_execution() -> None:
+    for command_name in ("china-tax-annual.md", "china-tax-year-end-plan.md"):
+        content = (ROOT / "commands" / command_name).read_text()
+        assert "provide this command for the user to run" in content
+        assert "prefer the deterministic script" not in content
+        assert "use planning mode" not in content
+
+
+def test_china_tax_annual_documents_realized_pnl_opt_in() -> None:
+    content = (ROOT / "commands" / "china-tax-annual.md").read_text()
+
+    assert "include_realized_pnl=True" in content
+    assert 'realized_pnl_asset_types=["STK"]' in content
+    assert "china_iit_property_transfer_rate" in content

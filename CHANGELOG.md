@@ -5,7 +5,8 @@
 ### Added
 
 - `portfolio --ff` workflow documentation for forcing a fresh Flex fetch before portfolio analysis.
-- Regression tests for session cache freshness, force refresh bypass, timestamp updates, and portfolio command docs.
+- China tax MCP schema support for opt-in realized P&L parameters: `include_realized_pnl`, `realized_pnl_asset_types`, and `china_iit_property_transfer_rate`.
+- Regression tests for session cache freshness, force refresh bypass, timestamp updates, portfolio command docs, China tax realized P&L MCP wiring, README config keys, and China tax command script guidance.
 
 ### Changed
 

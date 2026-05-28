@@ -22,17 +22,17 @@ Generate a year-end tax planning review for China resident overseas brokerage ac
    - `ibkr_cost_analysis` for dividends, withholding tax, interest, fees, and tax-evidence readiness.
    - `ibkr_pnl_summary` for realized P&L context.
    - `ibkr_analyze(sections=["diluted_cost"])` if cost basis or breakeven quality is important.
-5. Separate observations into:
+7. Separate observations into:
    - Evidence readiness
    - Foreign tax credit readiness
    - Treaty withholding sanity checks
    - Cost-basis / tax-lot review
    - Year-end scenario modeling items
-6. Phrase every planning item as a neutral review point, not a buy/sell or filing directive.
+8. Phrase every planning item as a neutral review point, not a buy/sell or filing directive.
 
 ## Script Usage
 
-When the user provides local evidence files, use planning mode in `skills/china-tax/scripts/china_tax_self_check.py`:
+When the user provides local evidence files and shell execution is available, provide this command for the user to run with planning mode in `skills/china-tax/scripts/china_tax_self_check.py`:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/china-tax/scripts/china_tax_self_check.py" \

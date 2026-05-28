@@ -260,6 +260,21 @@ async def list_tools() -> list[Tool]:
                         "description": "China IIT estimate rate for china_tax section. Default: 0.20",
                         "default": 0.20,
                     },
+                    "include_realized_pnl": {
+                        "type": "boolean",
+                        "description": "Include opt-in STK realized P&L evidence for china_tax section. Default: false",
+                        "default": False,
+                    },
+                    "realized_pnl_asset_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Asset categories to include for realized P&L evidence. Default: ['STK']",
+                    },
+                    "china_iit_property_transfer_rate": {
+                        "type": "number",
+                        "description": "China IIT estimate rate for property transfer income candidates. Default: 0.20",
+                        "default": 0.20,
+                    },
                 },
             },
         ),
@@ -319,6 +334,21 @@ async def list_tools() -> list[Tool]:
                     "china_iit_dividend_rate": {
                         "type": "number",
                         "description": "China IIT estimate rate for interest/dividends/bonus income. Default: 0.20",
+                        "default": 0.20,
+                    },
+                    "include_realized_pnl": {
+                        "type": "boolean",
+                        "description": "Include opt-in STK realized P&L evidence. Default: false",
+                        "default": False,
+                    },
+                    "realized_pnl_asset_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Asset categories to include for realized P&L evidence. Default: ['STK']",
+                    },
+                    "china_iit_property_transfer_rate": {
+                        "type": "number",
+                        "description": "China IIT estimate rate for property transfer income candidates. Default: 0.20",
                         "default": 0.20,
                     },
                     "output_csv": {
@@ -543,6 +573,9 @@ def _china_tax_summary(data: AccountData, args: dict[str, Any]) -> dict[str, Any
     config = ChinaTaxConfig(
         tax_year=int(tax_year),
         china_iit_dividend_rate=float(args.get("china_iit_dividend_rate", 0.20)),
+        china_iit_property_transfer_rate=float(args.get("china_iit_property_transfer_rate", 0.20)),
+        include_realized_pnl=bool(args.get("include_realized_pnl", False)),
+        realized_pnl_asset_types=tuple(args.get("realized_pnl_asset_types", ["STK"])),
     )
     return ChinaTaxAnalyzer(data, config).summary()
 

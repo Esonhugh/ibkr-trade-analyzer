@@ -1,12 +1,15 @@
 ---
 name: ibkr-trade-analyzer
 description: >
-  Analyze Interactive Brokers (IBKR) trading history with read-only access.
-  Use for IBKR / Interactive Brokers / Flex Query / activity statement analysis,
-  including account summary reports, portfolio review, position sizing, cash and FX exposure,
-  P&L breakdown, win rate, Sharpe ratio, max drawdown, commissions, fees, cost basis,
-  breakeven / 保本价 / 摊薄成本, FIFO/LIFO, 现金换汇建议, 持仓分析, 盈亏分析,
-  交易复盘, 账户摘要, and brokerage trading behavior.
+  This skill should be used when the user asks to analyze Interactive Brokers
+  (IBKR) trading history, Flex Query data, activity statements, or local IBKR
+  CSV/XML exports. Use it for account summaries, portfolio/holding review,
+  position sizing, cash and FX exposure review, P&L, win rate, Sharpe ratio,
+  max drawdown, commissions, fees, cost basis, breakeven / 保本价 / 摊薄成本,
+  FIFO/LIFO comparison, report export, 交易复盘, 账户摘要, 持仓分析, 盈亏分析,
+  and neutral 现金/外汇敞口 review. It provides read-only analysis only and must
+  not place trades, convert currency, or give investment/tax advice.
+version: 2.2.0
 ---
 
 # IBKR Trade Analyzer
@@ -30,22 +33,23 @@ Before any analysis, ensure data is loaded:
 - Local file mode: call `ibkr_fetch_data(mode="file", source="/path/to/activity.xml")`.
 - If credentials are missing, tell Claude users to run `claude plugin configure ibkr-trade-analyzer`.
 
-Data is cached in the MCP server session. Do not reload unless the user asks for `force_refresh` or changes the source file.
+Data is cached in the MCP server session only while it is fresh for the current local date. The server may reload from today's XML cache or refresh Flex data when the in-memory session is stale. Do not force reload unless the user asks for `force_refresh`, uses `/ibkr-trade-analyzer:portfolio --ff`, or changes the source file.
 
 ## Intent Router
 
 | User Intent | Examples | Preferred Tool or Command Workflow |
 |---|---|---|
 | Account summary | summary report, 一页纸总结, quick review, 账户摘要 | `ibkr_pnl_summary` + `ibkr_portfolio` + `ibkr_cost_analysis`; use `/ibkr-trade-analyzer:summary` when slash commands are available |
-| Portfolio / positions | holdings, position sizing, 仓位, 持仓, concentration | `ibkr_portfolio`; use `/ibkr-trade-analyzer:portfolio` when available |
+| Portfolio / positions | holdings, position sizing, 仓位, 持仓, concentration | `ibkr_portfolio`; use `/ibkr-trade-analyzer:portfolio` when available, or `/ibkr-trade-analyzer:portfolio --ff` when the user asks to force fresh Flex data |
 | Cash and FX | cash balance, FX exposure, 现金换汇建议, currency exposure | `ibkr_portfolio` + `ibkr_fx_analysis` + `ibkr_cost_analysis`; use `/ibkr-trade-analyzer:cash-fx` when available |
 | P&L performance | realized P&L, Sharpe, drawdown, monthly returns, 盈亏 | `ibkr_pnl_summary` |
 | Trading behavior | win rate, frequency, holding period, profit factor, 交易习惯 | `ibkr_trade_patterns` |
 | Costs and fees | commissions, interest, dividends, fee drag, 手续费 | `ibkr_cost_analysis` |
-| China tax evidence | 中国个税, 境外所得, 外税抵免, 1042-S, 年度报税 | `ibkr_china_tax_annual_calc`; use `china-tax` skill for official-source workflow |
+| China tax evidence | 中国个税, 境外所得, 外税抵免, 1042-S, 年度报税 | `ibkr_china_tax_annual_calc`; use `china-tax` skill and `/ibkr-trade-analyzer:china-tax-annual` for official-source annual workflows |
+| China tax planning | 年前税务优化, year-end China tax planning, evidence readiness | use `china-tax` skill and `/ibkr-trade-analyzer:china-tax-year-end-plan` for neutral review workflows |
 | Cost basis | breakeven, 保本价, 摊薄成本, FIFO, LIFO | `ibkr_analyze(sections=["diluted_cost"])` |
 | Full report | generate report, export HTML, 导出报告 | `ibkr_generate_report`; use `/ibkr-trade-analyzer:report` when available |
-| Filtered advanced analysis | date range, asset type, STK/OPT only | `ibkr_analyze(sections=[...], period="YYYY-MM-DD:YYYY-MM-DD", asset_types="STK,OPT")`; `china_tax` is opt-in only |
+| Filtered advanced analysis | date range, asset type, STK/OPT only | `ibkr_analyze(sections=[...], period="YYYY-MM-DD:YYYY-MM-DD", asset_types="STK,OPT")`; use `/ibkr-trade-analyzer:analyze` when available; `china_tax` is opt-in only |
 
 Ask one clarifying question only when the data source or intended section cannot be inferred.
 
@@ -60,8 +64,10 @@ Ask one clarifying question only when the data source or intended section cannot
 | `ibkr_trade_patterns` | Trading behavior: win rate, frequency, holding periods, profit factor. |
 | `ibkr_fx_analysis` | FX conversion history, average rates, ranges, FX commissions. |
 | `ibkr_cost_analysis` | Commissions, interest, dividends, and fee-to-P&L ratio. |
-| `ibkr_china_tax_annual_calc` | Informational China resident annual dividend/withholding estimate from IBKR Flex data and IBKR FX evidence. |
+| `ibkr_china_tax_annual_calc` | Informational China resident annual dividend/withholding estimate from IBKR Flex data and IBKR FX evidence; requires `tax_year` unless data dates allow inference. |
 | `ibkr_generate_report` | Generate Markdown and HTML report files. |
+
+`ibkr_china_tax_annual_calc` and `ibkr_analyze(sections=["china_tax"])` support opt-in STK realized P&L evidence with `include_realized_pnl=True`, `realized_pnl_asset_types=["STK"]`, and `china_iit_property_transfer_rate` when the user explicitly requests realized-gain review.
 
 ## Output Templates
 
@@ -94,6 +100,11 @@ Use this format for currency questions:
 3. **FX History**.
 4. **Conversion Considerations** — `Currency exposures to review`, `Operational balances to review`, `Monitor`.
 5. **Risks & Caveats** — include informational-analysis disclaimer.
+
+## Additional Resources
+
+- `scripts/USAGE.md` — standalone CLI usage, analyzer sections, cache behavior, and local file workflows.
+- `scripts/ibkr_analyzer.py` — standalone read-only CLI wrapper for generating reports outside MCP workflows.
 
 ## Troubleshooting
 

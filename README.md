@@ -157,8 +157,8 @@ Claude credentials are configured at install time via Claude Code's built-in set
 
 | Field | Sensitive | Description |
 |-------|-----------|-------------|
-| `flex_token` | Yes — stored in system keychain | Flex Web Service token |
-| `query_id` | No — stored in settings.json | Flex Query numeric ID |
+| `ibkr_flex_token` | Yes — stored in system keychain | Flex Web Service token |
+| `ibkr_query_id` | No — stored in settings.json | Flex Query numeric ID |
 | `proxy` | No | Proxy URL, e.g. `socks5://127.0.0.1:7980`. Falls back to `ALL_PROXY` / `HTTPS_PROXY` env vars |
 
 ### Option B: Local File

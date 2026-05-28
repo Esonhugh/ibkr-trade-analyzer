@@ -177,8 +177,8 @@ Claude 凭证在安装时由 Claude Code 的内置插件设置系统提示输入
 
 | 字段 | 是否加密 | 说明 |
 |------|----------|------|
-| `flex_token` | 是 — 存入系统 keychain | Flex Web Service token |
-| `query_id` | 否 — 存入 settings.json | Flex Query 数字 ID |
+| `ibkr_flex_token` | 是 — 存入系统 keychain | Flex Web Service token |
+| `ibkr_query_id` | 否 — 存入 settings.json | Flex Query 数字 ID |
 | `proxy` | 否 | 代理地址，如 `socks5://127.0.0.1:7980`，留空自动读取 `ALL_PROXY` / `HTTPS_PROXY` |
 
 ## 输出
