@@ -273,9 +273,9 @@ class ReportGenerator:
                     f"| Short % | {pa.get('short_pct', 0):.1f}% |",
                     f"| Top 5 Concentration | {pa.get('top5_concentration_pct', 0):.1f}% |", "",
                 ]
-                holdings = pa.get("top_holdings", [])
+                holdings = pa.get("all_holdings", [])
                 if holdings:
-                    s += ["### Top Holdings\n",
+                    s += ["### All Holdings\n",
                           "| Symbol | Qty | Cost Basis | Market Value | Unrealized P&L | % |",
                           "|--------|-----|-----------|-------------|----------------|---|"]
                     for h in holdings:
@@ -630,7 +630,7 @@ class ReportGenerator:
             risk += f", good risk-adjusted returns (Sharpe {sharpe:.2f})"
         profile.append(("Risk Profile", risk))
 
-        holdings = self.port_s.get("top_holdings", [])
+        holdings = self.port_s.get("all_holdings", [])
         if holdings:
             etf_keywords = {"ETF", "SGOV", "TQQQ", "QQQI", "QQQ", "SPY", "IVV", "VOO", "VTI", "AGG", "BND"}
             etf_pct = sum(h["pct"] for h in holdings if h["symbol"] in etf_keywords or h["symbol"].endswith("Q"))
@@ -689,7 +689,7 @@ class ReportGenerator:
         details: list[dict] = []
         warnings: list[str] = []
         strengths: list[str] = []
-        holdings = self.port_s.get("top_holdings", [])
+        holdings = self.port_s.get("all_holdings", [])
         top5 = self.port_s.get("top5_concentration_pct", 0)
 
         if holdings:
@@ -829,14 +829,14 @@ class ReportGenerator:
             charts["frequency_heatmap"] = fig.to_json()
 
         if self._on("portfolio"):
-            holdings = self.port_s.get("top_holdings", [])
+            holdings = self.port_s.get("all_holdings", [])
             if holdings:
                 symbols = [h["symbol"] for h in holdings]
                 upnl = [h.get("unrealized_pnl", 0) for h in holdings]
                 fig = make_subplots(rows=1, cols=2, subplot_titles=("Portfolio Weight (%)", "Unrealized P&L ($)"))
                 fig.add_trace(go.Bar(x=symbols, y=[h["pct"] for h in holdings], marker_color="#FF9800", name="Weight"), row=1, col=1)
                 fig.add_trace(go.Bar(x=symbols, y=upnl, marker_color=["#4CAF50" if v >= 0 else "#F44336" for v in upnl], name="Unrealized P&L"), row=1, col=2)
-                fig.update_layout(title="Top Holdings: Concentration & Unrealized P&L", template="plotly_white", height=400, showlegend=False)
+                fig.update_layout(title="Holdings: Concentration & Unrealized P&L", template="plotly_white", height=400, showlegend=False)
                 charts["concentration"] = fig.to_json()
 
         if self._on("cost"):

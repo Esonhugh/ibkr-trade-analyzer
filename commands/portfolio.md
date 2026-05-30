@@ -19,8 +19,8 @@ Review IBKR portfolio structure using read-only reporting data.
 
 Return Markdown with these sections:
 
-1. **Portfolio Snapshot** — account base currency, position count, cash balance count, total value when available.
-2. **Top Positions** — table of the largest positions by market value or exposure when available; default to top 10.
+1. **Portfolio Snapshot** — base currency, position count, cash balance count, and total value when available.
+2. **All Holdings** — table of every holding sorted by portfolio percentage from largest to smallest.
 3. **Allocation** — asset class, long/short, sector, and currency allocation when present.
 4. **Concentration Review** — largest position share, top-5 share, and risk score when available.
 5. **Position Sizing Notes** — neutral observations about oversize, illiquid, or concentrated positions.

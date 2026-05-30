@@ -9,6 +9,9 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from ibkr_analyzer_lib.analyzers.portfolio import PortfolioAnalyzer
+from ibkr_analyzer_lib.models import OpenPosition
+
 _plugin_root = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -342,13 +345,16 @@ class TestPortfolioDetails:
         data = parse_result(result)
         assert data.get("total_value", 0) > 0 or data.get("total_positions", 0) >= 0
 
-    def test_portfolio_top_holdings(self):
+    def test_portfolio_all_holdings_contract(self):
         result = run(srv.call_tool("ibkr_portfolio", {}))
         data = parse_result(result)
-        if "top_holdings" in data:
-            for h in data["top_holdings"]:
-                assert "symbol" in h
-                assert "value" in h
+        assert "all_holdings" in data
+        removed_key = "top" + "_holdings"
+        assert removed_key not in data
+        for h in data["all_holdings"]:
+            assert "symbol" in h
+            assert "value" in h
+            assert "pct" in h
 
     def test_portfolio_cash_section(self):
         result = run(srv.call_tool("ibkr_portfolio", {}))
@@ -356,6 +362,23 @@ class TestPortfolioDetails:
         if "cash" in data:
             assert "total_cash_base" in data["cash"]
             assert "total_account_value" in data["cash"]
+
+
+class TestPortfolioAnalyzerHoldingsContract:
+    def test_all_holdings_returns_every_symbol_sorted_by_pct_desc(self):
+        positions = [
+            OpenPosition(symbol="SMALL", asset_category="STK", quantity=1, position_value=100),
+            OpenPosition(symbol="LARGE", asset_category="STK", quantity=1, position_value=300),
+            OpenPosition(symbol="MEDIUM", asset_category="STK", quantity=1, position_value=200),
+        ]
+
+        summary = PortfolioAnalyzer(positions, []).summary()
+
+        assert "all_holdings" in summary
+        removed_key = "top" + "_holdings"
+        assert removed_key not in summary
+        assert [h["symbol"] for h in summary["all_holdings"]] == ["LARGE", "MEDIUM", "SMALL"]
+        assert [round(h["pct"], 2) for h in summary["all_holdings"]] == [50.0, 33.33, 16.67]
 
 
 class TestAnalyzeEdgeCases:

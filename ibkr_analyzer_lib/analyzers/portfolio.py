@@ -53,7 +53,7 @@ class PortfolioAnalyzer:
             "short_pct": short_value / total_value * 100,
             "top5_concentration_pct": top5_pct,
             "top10_concentration_pct": top10_pct,
-            "top_holdings": [
+            "all_holdings": [
                 {
                     "symbol": s,
                     "value": v,
@@ -62,7 +62,7 @@ class PortfolioAnalyzer:
                     "cost_basis": next((p.cost_basis_price for p in self.positions if p.symbol == s), 0),
                     "unrealized_pnl": next((p.unrealized_pnl for p in self.positions if p.symbol == s), 0),
                 }
-                for s, v in sorted_symbols[:10]
+                for s, v in sorted_symbols
             ],
             "currencies": {k: v / total_value * 100 for k, v in
                           {p.currency: {p.currency: 0 for _ in self.positions}
