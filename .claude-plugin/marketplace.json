@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Claude Code plugin for analyzing Interactive Brokers trading history",
-    "version": "2.2.0"
+    "version": "2.2.1"
   },
   "plugins": [
     {
