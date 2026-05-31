@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.1] - 2026-06-01
+
+### Added
+
+- Portfolio analysis now returns `all_holdings`, a complete holdings table sorted by portfolio percentage.
+- README and README-zh release notes now describe the changes made since the previous version update.
+
+### Changed
+
+- Portfolio, report, and summary command guidance now refer to all holdings instead of a top-10 holdings subset.
+- Markdown report generation now prints every holding in the Portfolio Structure section.
+- README and README-zh version badges now match the plugin manifest version.
+
+### Fixed
+
+- China tax documentation and MCP schema references now consistently cover opt-in realized P&L parameters: `include_realized_pnl`, `realized_pnl_asset_types`, and `china_iit_property_transfer_rate`.
+
 ## [2.2.0] - 2026-05-28
 
 ### Added

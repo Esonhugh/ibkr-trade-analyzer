@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A Claude Code plugin for analyzing Interactive Brokers trading history — read-only, zero risk.**
@@ -21,7 +21,13 @@ This plugin connects to your IBKR account (via the read-only Flex Web Service AP
 | **Risk Assessment** | Scored 0-100 across 6 dimensions with specific warnings |
 | **Price Charts** | Historical price data with buy/sell trade markers overlaid |
 
-### What's New in v2.2.0
+### What's New in v2.2.1
+
+- **All holdings in portfolio views** — portfolio analysis, command guidance, and generated reports now show every holding sorted by portfolio percentage instead of limiting output to a top-10 subset.
+- **China tax content consistency** — documentation and MCP schema references now consistently describe opt-in realized P&L parameters: `include_realized_pnl`, `realized_pnl_asset_types`, and `china_iit_property_transfer_rate`.
+- **Release documentation sync** — README, README-zh, CHANGELOG, plugin manifest, and marketplace metadata now all point at v2.2.1.
+
+### v2.2.0
 
 - **Date-aware session cache** — long-lived MCP sessions now reuse in-memory IBKR data only when it was loaded today; stale sessions fall through to today's XML cache or one Flex API refresh.
 - **Portfolio force refresh** — `/ibkr-trade-analyzer:portfolio --ff` forces `ibkr_fetch_data(mode="flex", force_refresh=true)` before calculating holdings.
@@ -104,7 +110,7 @@ The plugin also exposes command-style workflows for common reviews:
 | Command | Use When | Main Tools |
 |---------|----------|------------|
 | `/ibkr-trade-analyzer:summary` | One-page account summary | `ibkr_pnl_summary`, `ibkr_portfolio`, `ibkr_cost_analysis` |
-| `/ibkr-trade-analyzer:portfolio` | Holdings, allocation, concentration, position sizing | `ibkr_portfolio` |
+| `/ibkr-trade-analyzer:portfolio` | All holdings, allocation, concentration, position sizing | `ibkr_portfolio` |
 | `/ibkr-trade-analyzer:cash-fx` | Cash balances, currency exposure, conversion considerations | `ibkr_portfolio`, `ibkr_fx_analysis`, `ibkr_cost_analysis` |
 | `/ibkr-trade-analyzer:report` | Generate Markdown and HTML reports | `ibkr_generate_report` |
 | `/ibkr-trade-analyzer:analyze` | Targeted section analysis with filters | `ibkr_analyze` |

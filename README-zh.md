@@ -1,6 +1,6 @@
 # IBKR Trade Analyzer
 
-[![版本](https://img.shields.io/badge/版本-2.2.0-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
+[![版本](https://img.shields.io/badge/版本-2.2.1-blue)](https://github.com/Esonhugh/Marketplace/tree/Skyworship/plugins/ibkr-trade-analyzer)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green)](LICENSE)
 
 **一个用于分析 Interactive Brokers 交易历史的 Claude Code 插件 — 只读分析，零风险。**
@@ -21,7 +21,13 @@
 | **风险评估** | 6 个维度的 0-100 评分，附具体风险预警 |
 | **价格图表** | 叠加买卖标记的历史价格走势图 |
 
-### v2.2.0 新特性
+### v2.2.1 新特性
+
+- **组合视图展示全部持仓** — portfolio 分析、命令说明和生成报告现在按组合占比展示全部持仓，不再限制为 Top 10。
+- **China tax 内容一致性** — 文档和 MCP schema 说明统一覆盖可选的已实现盈亏参数：`include_realized_pnl`、`realized_pnl_asset_types` 和 `china_iit_property_transfer_rate`。
+- **发布文档同步** — README、README-zh、CHANGELOG、插件 manifest 和 marketplace 元数据都已同步到 v2.2.1。
+
+### v2.2.0
 
 - **按日期检查 session 缓存** — 长时间运行的 MCP session 只复用当天加载的 IBKR 内存数据；过期数据会回落到当天 XML 缓存或尝试一次 Flex API 更新。
 - **Portfolio 强制刷新参数** — `/ibkr-trade-analyzer:portfolio --ff` 会在计算持仓前调用 `ibkr_fetch_data(mode="flex", force_refresh=true)`。
@@ -110,7 +116,7 @@ cp -r plugins/ibkr-trade-analyzer ~/.claude/plugins/ibkr-trade-analyzer
 | 命令 | 适用场景 | 主要工具 |
 |------|----------|----------|
 | `/ibkr-trade-analyzer:summary` | 一页纸账户摘要 | `ibkr_pnl_summary`, `ibkr_portfolio`, `ibkr_cost_analysis` |
-| `/ibkr-trade-analyzer:portfolio` | 持仓、仓位、集中度、配置比例 | `ibkr_portfolio` |
+| `/ibkr-trade-analyzer:portfolio` | 全部持仓、仓位、集中度、配置比例 | `ibkr_portfolio` |
 | `/ibkr-trade-analyzer:cash-fx` | 现金余额、币种敞口、换汇观察 | `ibkr_portfolio`, `ibkr_fx_analysis`, `ibkr_cost_analysis` |
 | `/ibkr-trade-analyzer:report` | 生成 Markdown 和 HTML 完整报告 | `ibkr_generate_report` |
 | `/ibkr-trade-analyzer:analyze` | 带时间或资产类型过滤的定向分析 | `ibkr_analyze` |
